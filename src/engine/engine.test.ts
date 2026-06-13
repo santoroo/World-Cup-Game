@@ -69,6 +69,26 @@ describe('compatibility (4)', () => {
     expect(evaluateFit(all, 'GK').fitMultiplier).toBe(1);
     expect(evaluateFit(all, 'ST').fitMultiplier).toBe(1);
   });
+
+  it('only allows sensible cross-position moves; forbids the rest', () => {
+    const single = (pos: string) =>
+      EDITIONS.flatMap((e) => e.players).find((p) => p.positions.length === 1 && p.positions[0] === pos)!;
+
+    const rb = single('RB');
+    expect(evaluateFit(rb, 'RB').allowed).toBe(true); // exact
+    expect(evaluateFit(rb, 'LB').allowed).toBe(true); // fullback interchange
+    expect(evaluateFit(rb, 'CB').allowed).toBe(true); // CB ↔ fullback
+    for (const bad of ['DM', 'CM', 'AM', 'LW', 'RW', 'ST', 'GK'] as const) {
+      expect(evaluateFit(rb, bad).allowed).toBe(false);
+    }
+
+    const st = single('ST');
+    expect(evaluateFit(st, 'LW').allowed).toBe(true); // front three
+    expect(evaluateFit(st, 'RW').allowed).toBe(true);
+    for (const bad of ['CB', 'LB', 'RB', 'DM', 'CM', 'AM', 'GK'] as const) {
+      expect(evaluateFit(st, bad).allowed).toBe(false); // no striker-at-centreback
+    }
+  });
 });
 
 describe('draft + simulation', () => {
