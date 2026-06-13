@@ -1,0 +1,436 @@
+{
+  "editions": [
+    {
+      "id": "bra_1970", "country": "Brasil", "flag": "🇧🇷", "year": 1970, "strength": 96, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "felix_bra_1970", "name": "Félix", "positions": ["GK"], "overall": 78, "desc": "Goleiro do esquadrão de 70." },
+        { "id": "carlosalberto_bra_1970", "name": "Carlos Alberto", "positions": ["RB"], "overall": 90, "desc": "Capitão e autor do gol mais bonito da história." },
+        { "id": "brito_bra_1970", "name": "Brito", "positions": ["CB"], "overall": 82, "desc": "Zagueiro firme na marcação." },
+        { "id": "piazza_bra_1970", "name": "Piazza", "positions": ["CB"], "overall": 83, "desc": "Saída de bola e sobriedade." },
+        { "id": "everaldo_bra_1970", "name": "Everaldo", "positions": ["LB"], "overall": 80, "desc": "Lateral-esquerdo titular da campanha." },
+        { "id": "clodoaldo_bra_1970", "name": "Clodoaldo", "positions": ["DM"], "overall": 85, "desc": "Equilíbrio e drible no meio-campo." },
+        { "id": "gerson_bra_1970", "name": "Gérson", "positions": ["CM"], "overall": 89, "desc": "O canhão do meio, passe milimétrico." },
+        { "id": "rivelino_bra_1970", "name": "Rivelino", "positions": ["AM", "LW"], "overall": 89, "desc": "Patada atômica e elástico." },
+        { "id": "jairzinho_bra_1970", "name": "Jairzinho", "positions": ["RW"], "overall": 91, "desc": "Furacão que marcou em todos os jogos." },
+        { "id": "tostao_bra_1970", "name": "Tostão", "positions": ["ST"], "overall": 88, "desc": "Inteligência e mobilidade na frente." },
+        { "id": "pele_bra_1970", "name": "Pelé", "positions": ["ST", "AM"], "overall": 98, "desc": "O Rei. Tricampeão mundial em 70." }
+      ]
+    },
+    {
+      "id": "bra_1982", "country": "Brasil", "flag": "🇧🇷", "year": 1982, "strength": 90, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "waldirperes_bra_1982", "name": "Waldir Peres", "positions": ["GK"], "overall": 75, "desc": "Goleiro da seleção de 82." },
+        { "id": "leandro_bra_1982", "name": "Leandro", "positions": ["RB"], "overall": 84, "desc": "Lateral elegante e ofensivo." },
+        { "id": "oscar_bra_1982", "name": "Oscar", "positions": ["CB"], "overall": 82, "desc": "Zagueiro de confiança." },
+        { "id": "luizinho_bra_1982", "name": "Luizinho", "positions": ["CB"], "overall": 81, "desc": "Marcação atenta na zaga." },
+        { "id": "junior_bra_1982", "name": "Júnior", "positions": ["LB"], "overall": 86, "desc": "Lateral com alma de meia." },
+        { "id": "cerezo_bra_1982", "name": "Toninho Cerezo", "positions": ["DM"], "overall": 84, "desc": "Volante de marcação e saída." },
+        { "id": "falcao_bra_1982", "name": "Falcão", "positions": ["CM"], "overall": 90, "desc": "O Rei de Roma, meio-campista total." },
+        { "id": "socrates_bra_1982", "name": "Sócrates", "positions": ["CM", "AM"], "overall": 92, "desc": "Doutor, líder e mestre do meio." },
+        { "id": "zico_bra_1982", "name": "Zico", "positions": ["AM"], "overall": 94, "desc": "O Galinho, craque máximo da geração." },
+        { "id": "eder_bra_1982", "name": "Éder", "positions": ["LW"], "overall": 86, "desc": "Canhota explosiva pela esquerda." },
+        { "id": "serginho_bra_1982", "name": "Serginho", "positions": ["ST"], "overall": 78, "desc": "Centroavante de referência." }
+      ]
+    },
+    {
+      "id": "bra_1994", "country": "Brasil", "flag": "🇧🇷", "year": 1994, "strength": 92, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "taffarel_bra_1994", "name": "Taffarel", "positions": ["GK"], "overall": 84, "desc": "Herói dos pênaltis, tetracampeão." },
+        { "id": "jorginho_bra_1994", "name": "Jorginho", "positions": ["RB"], "overall": 83, "desc": "Lateral-direito titular." },
+        { "id": "cafu_bra_1994", "name": "Cafu", "positions": ["RB"], "overall": 85, "desc": "Pendolino, sobe e desce a direita." },
+        { "id": "aldair_bra_1994", "name": "Aldair", "positions": ["CB"], "overall": 85, "desc": "Zagueiro classudo de Roma." },
+        { "id": "marciosantos_bra_1994", "name": "Márcio Santos", "positions": ["CB"], "overall": 82, "desc": "Zaga jovem e firme." },
+        { "id": "branco_bra_1994", "name": "Branco", "positions": ["LB"], "overall": 82, "desc": "Canhão nas cobranças de falta." },
+        { "id": "maurosilva_bra_1994", "name": "Mauro Silva", "positions": ["DM"], "overall": 84, "desc": "Cadeado do meio-campo." },
+        { "id": "dunga_bra_1994", "name": "Dunga", "positions": ["DM"], "overall": 86, "desc": "Capitão e líder da raça." },
+        { "id": "rai_bra_1994", "name": "Raí", "positions": ["AM"], "overall": 84, "desc": "Camisa 10 da campanha." },
+        { "id": "bebeto_bra_1994", "name": "Bebeto", "positions": ["ST"], "overall": 90, "desc": "Faro de gol e a dança do nenê." },
+        { "id": "romario_bra_1994", "name": "Romário", "positions": ["ST"], "overall": 95, "desc": "Baixinho genial, melhor do mundo em 94." }
+      ]
+    },
+    {
+      "id": "bra_2002", "country": "Brasil", "flag": "🇧🇷", "year": 2002, "strength": 96, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "marcos_bra_2002", "name": "Marcos", "positions": ["GK"], "overall": 83, "desc": "São Marcos, paredão pentacampeão." },
+        { "id": "cafu_bra_2002", "name": "Cafu", "positions": ["RB"], "overall": 88, "desc": "Capitão, terceira final seguida." },
+        { "id": "lucio_bra_2002", "name": "Lúcio", "positions": ["CB"], "overall": 86, "desc": "Zagueiro que sobe para atacar." },
+        { "id": "edmilson_bra_2002", "name": "Edmílson", "positions": ["CB", "DM"], "overall": 83, "desc": "Versátil entre zaga e volante." },
+        { "id": "robertocarlos_bra_2002", "name": "Roberto Carlos", "positions": ["LB"], "overall": 89, "desc": "Míssil pela esquerda." },
+        { "id": "gilbertosilva_bra_2002", "name": "Gilberto Silva", "positions": ["DM"], "overall": 83, "desc": "O cérebro invisível do meio." },
+        { "id": "kleberson_bra_2002", "name": "Kléberson", "positions": ["CM"], "overall": 80, "desc": "Motor do meio-campo." },
+        { "id": "juninho_bra_2002", "name": "Juninho Paulista", "positions": ["CM"], "overall": 80, "desc": "Qualidade e entrega." },
+        { "id": "ronaldinho_bra_2002", "name": "Ronaldinho", "positions": ["AM", "LW"], "overall": 93, "desc": "Magia e o gol de falta sobre Seaman." },
+        { "id": "rivaldo_bra_2002", "name": "Rivaldo", "positions": ["AM"], "overall": 94, "desc": "Canhota decisiva, craque absoluto." },
+        { "id": "ronaldo_bra_2002", "name": "Ronaldo", "positions": ["ST"], "overall": 98, "desc": "Fenômeno, artilheiro e campeão em 2002." }
+      ]
+    },
+    {
+      "id": "arg_1978", "country": "Argentina", "flag": "🇦🇷", "year": 1978, "strength": 86, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "fillol_arg_1978", "name": "Ubaldo Fillol", "positions": ["GK"], "overall": 83, "desc": "Pato, muralha do título caseiro." },
+        { "id": "tarantini_arg_1978", "name": "Alberto Tarantini", "positions": ["LB"], "overall": 79, "desc": "Lateral aguerrido." },
+        { "id": "passarella_arg_1978", "name": "Daniel Passarella", "positions": ["CB"], "overall": 88, "desc": "Capitão e zagueiro goleador." },
+        { "id": "galvan_arg_1978", "name": "Luis Galván", "positions": ["CB"], "overall": 79, "desc": "Zaga sólida." },
+        { "id": "gallego_arg_1978", "name": "Américo Gallego", "positions": ["DM"], "overall": 80, "desc": "Volante de muita marcação." },
+        { "id": "ardiles_arg_1978", "name": "Osvaldo Ardiles", "positions": ["CM"], "overall": 86, "desc": "Meio-campista refinado." },
+        { "id": "bertoni_arg_1978", "name": "Daniel Bertoni", "positions": ["RW"], "overall": 82, "desc": "Ponta que decidiu a final." },
+        { "id": "houseman_arg_1978", "name": "René Houseman", "positions": ["RW"], "overall": 81, "desc": "Drible curto e imprevisível." },
+        { "id": "luque_arg_1978", "name": "Leopoldo Luque", "positions": ["ST"], "overall": 84, "desc": "Centroavante potente." },
+        { "id": "kempes_arg_1978", "name": "Mario Kempes", "positions": ["ST"], "overall": 91, "desc": "Matador, artilheiro do Mundial de 78." }
+      ]
+    },
+    {
+      "id": "arg_1986", "country": "Argentina", "flag": "🇦🇷", "year": 1986, "strength": 96, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "pumpido_arg_1986", "name": "Nery Pumpido", "positions": ["GK"], "overall": 80, "desc": "Goleiro campeão no México." },
+        { "id": "cuciuffo_arg_1986", "name": "José Luis Cuciuffo", "positions": ["RB"], "overall": 78, "desc": "Lateral marcador." },
+        { "id": "brown_arg_1986", "name": "José Luis Brown", "positions": ["CB"], "overall": 80, "desc": "Tano, gol na final." },
+        { "id": "ruggeri_arg_1986", "name": "Oscar Ruggeri", "positions": ["CB"], "overall": 84, "desc": "Cabeça de zaga implacável." },
+        { "id": "olarticoechea_arg_1986", "name": "Julio Olarticoechea", "positions": ["LB"], "overall": 79, "desc": "Lateral de confiança." },
+        { "id": "batista_arg_1986", "name": "Sergio Batista", "positions": ["DM"], "overall": 82, "desc": "Checho, equilíbrio do meio." },
+        { "id": "giusti_arg_1986", "name": "Ricardo Giusti", "positions": ["DM"], "overall": 80, "desc": "Marcação incansável." },
+        { "id": "enrique_arg_1986", "name": "Héctor Enrique", "positions": ["CM"], "overall": 80, "desc": "Deu o passe pro gol do século." },
+        { "id": "burruchaga_arg_1986", "name": "Jorge Burruchaga", "positions": ["AM"], "overall": 85, "desc": "Autor do gol do título." },
+        { "id": "valdano_arg_1986", "name": "Jorge Valdano", "positions": ["ST"], "overall": 86, "desc": "Centroavante inteligente." },
+        { "id": "maradona_arg_1986", "name": "Diego Maradona", "positions": ["AM"], "overall": 99, "desc": "D10S. Carregou a Argentina ao título." }
+      ]
+    },
+    {
+      "id": "arg_2022", "country": "Argentina", "flag": "🇦🇷", "year": 2022, "strength": 95, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "emimartinez_arg_2022", "name": "Emiliano Martínez", "positions": ["GK"], "overall": 87, "desc": "Dibu, herói nos pênaltis." },
+        { "id": "molina_arg_2022", "name": "Nahuel Molina", "positions": ["RB"], "overall": 81, "desc": "Lateral com gol nas quartas." },
+        { "id": "romero_arg_2022", "name": "Cristian Romero", "positions": ["CB"], "overall": 85, "desc": "Cuti, zaga agressiva." },
+        { "id": "otamendi_arg_2022", "name": "Nicolás Otamendi", "positions": ["CB"], "overall": 83, "desc": "Experiência e raça na defesa." },
+        { "id": "acuna_arg_2022", "name": "Marcos Acuña", "positions": ["LB"], "overall": 81, "desc": "Huevo, intensidade pela esquerda." },
+        { "id": "depaul_arg_2022", "name": "Rodrigo De Paul", "positions": ["CM"], "overall": 84, "desc": "Motor e escudeiro de Messi." },
+        { "id": "enzo_arg_2022", "name": "Enzo Fernández", "positions": ["CM"], "overall": 84, "desc": "Revelação do torneio." },
+        { "id": "macallister_arg_2022", "name": "Alexis Mac Allister", "positions": ["CM"], "overall": 84, "desc": "Equilíbrio e chegada ao ataque." },
+        { "id": "dimaria_arg_2022", "name": "Ángel Di María", "positions": ["RW", "LW"], "overall": 87, "desc": "Fideo, gol na final." },
+        { "id": "julian_arg_2022", "name": "Julián Álvarez", "positions": ["ST"], "overall": 86, "desc": "Araña, faro de gol nato." },
+        { "id": "lautaro_arg_2022", "name": "Lautaro Martínez", "positions": ["ST"], "overall": 84, "desc": "Toro, potência na área." },
+        { "id": "messi_arg_2022", "name": "Lionel Messi", "positions": ["AM", "RW"], "overall": 97, "desc": "GOAT. Enfim campeão do mundo." }
+      ]
+    },
+    {
+      "id": "ger_1974", "country": "Alemanha", "flag": "🇩🇪", "year": 1974, "strength": 90, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "maier_ger_1974", "name": "Sepp Maier", "positions": ["GK"], "overall": 84, "desc": "A gata de Anzing, goleiro campeão." },
+        { "id": "vogts_ger_1974", "name": "Berti Vogts", "positions": ["RB"], "overall": 83, "desc": "Marcador implacável." },
+        { "id": "beckenbauer_ger_1974", "name": "Franz Beckenbauer", "positions": ["CB"], "overall": 93, "desc": "Kaiser, inventou o líbero moderno." },
+        { "id": "schwarzenbeck_ger_1974", "name": "Schwarzenbeck", "positions": ["CB"], "overall": 80, "desc": "Sombra fiel do Kaiser." },
+        { "id": "breitner_ger_1974", "name": "Paul Breitner", "positions": ["LB"], "overall": 86, "desc": "Lateral cerebral e goleador." },
+        { "id": "bonhof_ger_1974", "name": "Rainer Bonhof", "positions": ["DM"], "overall": 82, "desc": "Volante de chute forte." },
+        { "id": "overath_ger_1974", "name": "Wolfgang Overath", "positions": ["CM"], "overall": 85, "desc": "Canhota precisa no meio." },
+        { "id": "hoeness_ger_1974", "name": "Uli Hoeneß", "positions": ["AM"], "overall": 84, "desc": "Mobilidade e gols." },
+        { "id": "grabowski_ger_1974", "name": "Jürgen Grabowski", "positions": ["RW"], "overall": 82, "desc": "Ponta habilidoso." },
+        { "id": "muller_ger_1974", "name": "Gerd Müller", "positions": ["ST"], "overall": 93, "desc": "Der Bomber, gol do título de 74." }
+      ]
+    },
+    {
+      "id": "ger_1990", "country": "Alemanha", "flag": "🇩🇪", "year": 1990, "strength": 90, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "illgner_ger_1990", "name": "Bodo Illgner", "positions": ["GK"], "overall": 82, "desc": "Goleiro jovem e seguro." },
+        { "id": "berthold_ger_1990", "name": "Thomas Berthold", "positions": ["RB"], "overall": 80, "desc": "Lateral aplicado." },
+        { "id": "kohler_ger_1990", "name": "Jürgen Kohler", "positions": ["CB"], "overall": 83, "desc": "Zagueiro de marcação dura." },
+        { "id": "buchwald_ger_1990", "name": "Guido Buchwald", "positions": ["CB"], "overall": 82, "desc": "Anulou Maradona na final." },
+        { "id": "augenthaler_ger_1990", "name": "Klaus Augenthaler", "positions": ["CB"], "overall": 81, "desc": "Líbero experiente." },
+        { "id": "brehme_ger_1990", "name": "Andreas Brehme", "positions": ["LB"], "overall": 85, "desc": "Cobrou o pênalti do título." },
+        { "id": "hassler_ger_1990", "name": "Thomas Häßler", "positions": ["AM"], "overall": 83, "desc": "Baixinho criativo." },
+        { "id": "matthaus_ger_1990", "name": "Lothar Matthäus", "positions": ["CM"], "overall": 92, "desc": "Capitão e melhor do mundo." },
+        { "id": "littbarski_ger_1990", "name": "Pierre Littbarski", "positions": ["RW"], "overall": 82, "desc": "Drible e desequilíbrio." },
+        { "id": "klinsmann_ger_1990", "name": "Jürgen Klinsmann", "positions": ["ST"], "overall": 88, "desc": "Oportunista e incansável." },
+        { "id": "voller_ger_1990", "name": "Rudi Völler", "positions": ["ST"], "overall": 87, "desc": "Dupla mortal com Klinsmann." }
+      ]
+    },
+    {
+      "id": "ger_2014", "country": "Alemanha", "flag": "🇩🇪", "year": 2014, "strength": 95, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "neuer_ger_2014", "name": "Manuel Neuer", "positions": ["GK"], "overall": 92, "desc": "Goleiro-líbero, revolucionou a posição." },
+        { "id": "lahm_ger_2014", "name": "Philipp Lahm", "positions": ["RB", "DM"], "overall": 88, "desc": "Capitão versátil e inteligente." },
+        { "id": "boateng_ger_2014", "name": "Jérôme Boateng", "positions": ["CB"], "overall": 85, "desc": "Zaga rápida e lançadora." },
+        { "id": "hummels_ger_2014", "name": "Mats Hummels", "positions": ["CB"], "overall": 87, "desc": "Leitura de jogo impecável." },
+        { "id": "howedes_ger_2014", "name": "Benedikt Höwedes", "positions": ["LB", "CB"], "overall": 81, "desc": "Improvisado e eficiente na lateral." },
+        { "id": "schweinsteiger_ger_2014", "name": "Bastian Schweinsteiger", "positions": ["DM"], "overall": 88, "desc": "Coração do meio, sangrou na final." },
+        { "id": "khedira_ger_2014", "name": "Sami Khedira", "positions": ["DM"], "overall": 84, "desc": "Volante box-to-box." },
+        { "id": "kroos_ger_2014", "name": "Toni Kroos", "positions": ["CM"], "overall": 90, "desc": "Metrônomo, passe perfeito." },
+        { "id": "ozil_ger_2014", "name": "Mesut Özil", "positions": ["AM"], "overall": 87, "desc": "Garçom de assistências." },
+        { "id": "muller_ger_2014", "name": "Thomas Müller", "positions": ["ST", "RW"], "overall": 90, "desc": "Raumdeuter, sempre no lugar certo." },
+        { "id": "gotze_ger_2014", "name": "Mario Götze", "positions": ["AM"], "overall": 84, "desc": "Gol de ouro na final." },
+        { "id": "klose_ger_2014", "name": "Miroslav Klose", "positions": ["ST"], "overall": 85, "desc": "Maior artilheiro da história das Copas." }
+      ]
+    },
+    {
+      "id": "ita_1982", "country": "Itália", "flag": "🇮🇹", "year": 1982, "strength": 88, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "zoff_ita_1982", "name": "Dino Zoff", "positions": ["GK"], "overall": 85, "desc": "Capitão e goleiro campeão aos 40." },
+        { "id": "gentile_ita_1982", "name": "Claudio Gentile", "positions": ["CB"], "overall": 83, "desc": "Marcador implacável de craques." },
+        { "id": "scirea_ita_1982", "name": "Gaetano Scirea", "positions": ["CB"], "overall": 85, "desc": "Elegância e classe na zaga." },
+        { "id": "collovati_ita_1982", "name": "Fulvio Collovati", "positions": ["CB"], "overall": 80, "desc": "Zaga jovem e firme." },
+        { "id": "cabrini_ita_1982", "name": "Antonio Cabrini", "positions": ["LB"], "overall": 83, "desc": "Lateral bonito de se ver." },
+        { "id": "oriali_ita_1982", "name": "Gabriele Oriali", "positions": ["DM"], "overall": 80, "desc": "Volante de pulmão." },
+        { "id": "tardelli_ita_1982", "name": "Marco Tardelli", "positions": ["CM"], "overall": 85, "desc": "O grito de gol eternizado." },
+        { "id": "antognoni_ita_1982", "name": "Giancarlo Antognoni", "positions": ["AM"], "overall": 84, "desc": "Cérebro do meio italiano." },
+        { "id": "conti_ita_1982", "name": "Bruno Conti", "positions": ["RW"], "overall": 84, "desc": "Drible e velocidade pela direita." },
+        { "id": "rossi_ita_1982", "name": "Paolo Rossi", "positions": ["ST"], "overall": 90, "desc": "Pablito, artilheiro e herói de 82." }
+      ]
+    },
+    {
+      "id": "ita_2006", "country": "Itália", "flag": "🇮🇹", "year": 2006, "strength": 92, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "buffon_ita_2006", "name": "Gianluigi Buffon", "positions": ["GK"], "overall": 91, "desc": "Paredão quase intransponível." },
+        { "id": "zambrotta_ita_2006", "name": "Gianluca Zambrotta", "positions": ["RB"], "overall": 83, "desc": "Lateral dos dois lados." },
+        { "id": "cannavaro_ita_2006", "name": "Fabio Cannavaro", "positions": ["CB"], "overall": 90, "desc": "Capitão, melhor do mundo em 2006." },
+        { "id": "nesta_ita_2006", "name": "Alessandro Nesta", "positions": ["CB"], "overall": 86, "desc": "Zaga de pura classe." },
+        { "id": "materazzi_ita_2006", "name": "Marco Materazzi", "positions": ["CB"], "overall": 81, "desc": "Gol na final e provocação histórica." },
+        { "id": "grosso_ita_2006", "name": "Fabio Grosso", "positions": ["LB"], "overall": 81, "desc": "Pênalti do título e gol na semi." },
+        { "id": "gattuso_ita_2006", "name": "Gennaro Gattuso", "positions": ["DM"], "overall": 83, "desc": "Ringhio, pitbull do meio." },
+        { "id": "pirlo_ita_2006", "name": "Andrea Pirlo", "positions": ["CM"], "overall": 89, "desc": "Maestro, regente do meio-campo." },
+        { "id": "camoranesi_ita_2006", "name": "Mauro Camoranesi", "positions": ["RW"], "overall": 81, "desc": "Ponta argentino-italiano." },
+        { "id": "totti_ita_2006", "name": "Francesco Totti", "positions": ["AM"], "overall": 88, "desc": "Il Capitano, gênio romano." },
+        { "id": "delpiero_ita_2006", "name": "Alessandro Del Piero", "positions": ["AM", "ST"], "overall": 86, "desc": "Gol na semi contra a Alemanha." },
+        { "id": "toni_ita_2006", "name": "Luca Toni", "positions": ["ST"], "overall": 84, "desc": "Centroavante de área." }
+      ]
+    },
+    {
+      "id": "fra_1998", "country": "França", "flag": "🇫🇷", "year": 1998, "strength": 94, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "barthez_fra_1998", "name": "Fabien Barthez", "positions": ["GK"], "overall": 84, "desc": "Goleiro da careca da sorte." },
+        { "id": "thuram_fra_1998", "name": "Lilian Thuram", "positions": ["RB"], "overall": 86, "desc": "Dois gols salvadores na semi." },
+        { "id": "blanc_fra_1998", "name": "Laurent Blanc", "positions": ["CB"], "overall": 85, "desc": "Líder e saída de bola." },
+        { "id": "desailly_fra_1998", "name": "Marcel Desailly", "positions": ["CB"], "overall": 86, "desc": "A rocha da zaga francesa." },
+        { "id": "lizarazu_fra_1998", "name": "Bixente Lizarazu", "positions": ["LB"], "overall": 83, "desc": "Lateral-esquerdo intenso." },
+        { "id": "deschamps_fra_1998", "name": "Didier Deschamps", "positions": ["DM"], "overall": 84, "desc": "Capitão, o aguador genial." },
+        { "id": "petit_fra_1998", "name": "Emmanuel Petit", "positions": ["DM"], "overall": 84, "desc": "Gol que selou a final." },
+        { "id": "djorkaeff_fra_1998", "name": "Youri Djorkaeff", "positions": ["AM"], "overall": 85, "desc": "Criatividade e gols." },
+        { "id": "zidane_fra_1998", "name": "Zinedine Zidane", "positions": ["AM"], "overall": 95, "desc": "Zizou, dois gols de cabeça na final." },
+        { "id": "henry_fra_1998", "name": "Thierry Henry", "positions": ["ST"], "overall": 86, "desc": "Jovem artilheiro da campanha." },
+        { "id": "dugarry_fra_1998", "name": "Christophe Dugarry", "positions": ["ST"], "overall": 80, "desc": "Referência no ataque." }
+      ]
+    },
+    {
+      "id": "fra_2018", "country": "França", "flag": "🇫🇷", "year": 2018, "strength": 95, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "lloris_fra_2018", "name": "Hugo Lloris", "positions": ["GK"], "overall": 85, "desc": "Capitão e goleiro campeão." },
+        { "id": "pavard_fra_2018", "name": "Benjamin Pavard", "positions": ["RB"], "overall": 82, "desc": "Golaço contra a Argentina." },
+        { "id": "varane_fra_2018", "name": "Raphaël Varane", "positions": ["CB"], "overall": 86, "desc": "Zaga rápida e segura." },
+        { "id": "umtiti_fra_2018", "name": "Samuel Umtiti", "positions": ["CB"], "overall": 84, "desc": "Gol de cabeça na semifinal." },
+        { "id": "lucas_fra_2018", "name": "Lucas Hernández", "positions": ["LB"], "overall": 83, "desc": "Lateral guerreiro." },
+        { "id": "kante_fra_2018", "name": "N'Golo Kanté", "positions": ["DM"], "overall": 88, "desc": "Recupera tudo no meio-campo." },
+        { "id": "pogba_fra_2018", "name": "Paul Pogba", "positions": ["CM"], "overall": 87, "desc": "Gol na final e visão de jogo." },
+        { "id": "matuidi_fra_2018", "name": "Blaise Matuidi", "positions": ["CM"], "overall": 82, "desc": "Volume e marcação pela esquerda." },
+        { "id": "griezmann_fra_2018", "name": "Antoine Griezmann", "positions": ["AM", "ST"], "overall": 89, "desc": "Decisivo e líder do ataque." },
+        { "id": "dembele_fra_2018", "name": "Ousmane Dembélé", "positions": ["RW"], "overall": 81, "desc": "Velocidade e drible." },
+        { "id": "giroud_fra_2018", "name": "Olivier Giroud", "positions": ["ST"], "overall": 83, "desc": "Pivô que segura a bola." },
+        { "id": "mbappe_fra_2018", "name": "Kylian Mbappé", "positions": ["ST", "RW"], "overall": 91, "desc": "Foguete, gol na final aos 19 anos." }
+      ]
+    },
+    {
+      "id": "ned_1974", "country": "Holanda", "flag": "🇳🇱", "year": 1974, "strength": 92, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "jongbloed_ned_1974", "name": "Jan Jongbloed", "positions": ["GK"], "overall": 76, "desc": "Goleiro-líbero do Carrossel." },
+        { "id": "suurbier_ned_1974", "name": "Wim Suurbier", "positions": ["RB"], "overall": 80, "desc": "Lateral ofensivo." },
+        { "id": "rijsbergen_ned_1974", "name": "Wim Rijsbergen", "positions": ["CB"], "overall": 79, "desc": "Zaga do futebol total." },
+        { "id": "haan_ned_1974", "name": "Arie Haan", "positions": ["CB", "CM"], "overall": 82, "desc": "Versátil entre zaga e meio." },
+        { "id": "krol_ned_1974", "name": "Ruud Krol", "positions": ["LB", "CB"], "overall": 84, "desc": "Defensor elegante e polivalente." },
+        { "id": "jansen_ned_1974", "name": "Wim Jansen", "positions": ["DM"], "overall": 81, "desc": "Volante de marcação." },
+        { "id": "neeskens_ned_1974", "name": "Johan Neeskens", "positions": ["CM"], "overall": 88, "desc": "Pulmão e gols do meio." },
+        { "id": "rensenbrink_ned_1974", "name": "Rob Rensenbrink", "positions": ["LW"], "overall": 85, "desc": "Drible fino pela esquerda." },
+        { "id": "rep_ned_1974", "name": "Johnny Rep", "positions": ["RW"], "overall": 83, "desc": "Ponta veloz e goleador." },
+        { "id": "cruyff_ned_1974", "name": "Johan Cruyff", "positions": ["AM", "ST"], "overall": 96, "desc": "Profeta do gol, ícone do futebol total." }
+      ]
+    },
+    {
+      "id": "ned_2010", "country": "Holanda", "flag": "🇳🇱", "year": 2010, "strength": 90, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "stekelenburg_ned_2010", "name": "Maarten Stekelenburg", "positions": ["GK"], "overall": 82, "desc": "Goleiro seguro do vice." },
+        { "id": "vanderwiel_ned_2010", "name": "Gregory van der Wiel", "positions": ["RB"], "overall": 80, "desc": "Lateral jovem e veloz." },
+        { "id": "heitinga_ned_2010", "name": "John Heitinga", "positions": ["CB"], "overall": 80, "desc": "Zaga combativa." },
+        { "id": "mathijsen_ned_2010", "name": "Joris Mathijsen", "positions": ["CB"], "overall": 80, "desc": "Defensor experiente." },
+        { "id": "vanbronckhorst_ned_2010", "name": "Giovanni van Bronckhorst", "positions": ["LB"], "overall": 82, "desc": "Capitão, golaço na semifinal." },
+        { "id": "vanbommel_ned_2010", "name": "Mark van Bommel", "positions": ["DM"], "overall": 83, "desc": "Volante durão e líder." },
+        { "id": "dejong_ned_2010", "name": "Nigel de Jong", "positions": ["DM"], "overall": 82, "desc": "Marcação pesada no meio." },
+        { "id": "sneijder_ned_2010", "name": "Wesley Sneijder", "positions": ["AM"], "overall": 88, "desc": "Cérebro e gols decisivos." },
+        { "id": "vandervaart_ned_2010", "name": "Rafael van der Vaart", "positions": ["AM"], "overall": 83, "desc": "Qualidade de sobra no meio." },
+        { "id": "kuyt_ned_2010", "name": "Dirk Kuyt", "positions": ["RW"], "overall": 82, "desc": "Entrega e sacrifício pela equipe." },
+        { "id": "robben_ned_2010", "name": "Arjen Robben", "positions": ["RW"], "overall": 90, "desc": "Corta pra dentro e finaliza." },
+        { "id": "vanpersie_ned_2010", "name": "Robin van Persie", "positions": ["ST"], "overall": 87, "desc": "Centroavante de classe." }
+      ]
+    },
+    {
+      "id": "esp_2010", "country": "Espanha", "flag": "🇪🇸", "year": 2010, "strength": 94, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "casillas_esp_2010", "name": "Iker Casillas", "positions": ["GK"], "overall": 89, "desc": "San Iker, capitão campeão." },
+        { "id": "ramos_esp_2010", "name": "Sergio Ramos", "positions": ["RB", "CB"], "overall": 87, "desc": "Lateral e zagueiro de raça." },
+        { "id": "puyol_esp_2010", "name": "Carles Puyol", "positions": ["CB"], "overall": 86, "desc": "Líder e gol na semifinal." },
+        { "id": "pique_esp_2010", "name": "Gerard Piqué", "positions": ["CB"], "overall": 85, "desc": "Zaga moderna e tranquila." },
+        { "id": "capdevila_esp_2010", "name": "Joan Capdevila", "positions": ["LB"], "overall": 80, "desc": "Lateral-esquerdo titular." },
+        { "id": "busquets_esp_2010", "name": "Sergio Busquets", "positions": ["DM"], "overall": 85, "desc": "Volante que pensa o jogo." },
+        { "id": "xabialonso_esp_2010", "name": "Xabi Alonso", "positions": ["DM", "CM"], "overall": 87, "desc": "Lançamentos cirúrgicos." },
+        { "id": "xavi_esp_2010", "name": "Xavi", "positions": ["CM"], "overall": 92, "desc": "O cérebro do tiki-taka." },
+        { "id": "iniesta_esp_2010", "name": "Andrés Iniesta", "positions": ["AM", "CM"], "overall": 91, "desc": "Gol do título no último minuto." },
+        { "id": "silva_esp_2010", "name": "David Silva", "positions": ["AM"], "overall": 85, "desc": "Toque refinado e visão." },
+        { "id": "villa_esp_2010", "name": "David Villa", "positions": ["ST"], "overall": 88, "desc": "El Guaje, artilheiro da campanha." },
+        { "id": "pedro_esp_2010", "name": "Pedro", "positions": ["RW"], "overall": 82, "desc": "Velocidade pelos lados." }
+      ]
+    },
+    {
+      "id": "eng_1966", "country": "Inglaterra", "flag": "🇬🇧", "year": 1966, "strength": 88, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "banks_eng_1966", "name": "Gordon Banks", "positions": ["GK"], "overall": 86, "desc": "Um dos maiores goleiros de todos os tempos." },
+        { "id": "cohen_eng_1966", "name": "George Cohen", "positions": ["RB"], "overall": 79, "desc": "Lateral veloz." },
+        { "id": "jcharlton_eng_1966", "name": "Jack Charlton", "positions": ["CB"], "overall": 81, "desc": "Zaga alta e dominante." },
+        { "id": "moore_eng_1966", "name": "Bobby Moore", "positions": ["CB"], "overall": 89, "desc": "Capitão elegante, ergueu a taça." },
+        { "id": "wilson_eng_1966", "name": "Ray Wilson", "positions": ["LB"], "overall": 80, "desc": "Lateral-esquerdo confiável." },
+        { "id": "stiles_eng_1966", "name": "Nobby Stiles", "positions": ["DM"], "overall": 79, "desc": "Marcador incansável." },
+        { "id": "bcharlton_eng_1966", "name": "Bobby Charlton", "positions": ["CM", "AM"], "overall": 90, "desc": "Chute de longe e classe pura." },
+        { "id": "ball_eng_1966", "name": "Alan Ball", "positions": ["CM"], "overall": 82, "desc": "Energia ilimitada no meio." },
+        { "id": "peters_eng_1966", "name": "Martin Peters", "positions": ["AM"], "overall": 82, "desc": "Gol na final de 66." },
+        { "id": "hunt_eng_1966", "name": "Roger Hunt", "positions": ["ST"], "overall": 81, "desc": "Companheiro de ataque de Hurst." },
+        { "id": "hurst_eng_1966", "name": "Geoff Hurst", "positions": ["ST"], "overall": 86, "desc": "Único hat-trick em final de Copa." }
+      ]
+    },
+    {
+      "id": "uru_1970", "country": "Uruguai", "flag": "🇺🇾", "year": 1970, "strength": 82, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "mazurkiewicz_uru_1970", "name": "Ladislao Mazurkiewicz", "positions": ["GK"], "overall": 83, "desc": "Um dos melhores goleiros do mundo na época." },
+        { "id": "ubina_uru_1970", "name": "Luis Ubiña", "positions": ["LB"], "overall": 77, "desc": "Lateral marcador." },
+        { "id": "ancheta_uru_1970", "name": "Atilio Ancheta", "positions": ["CB"], "overall": 78, "desc": "Zaga sólida celeste." },
+        { "id": "matosas_uru_1970", "name": "Roberto Matosas", "positions": ["CB"], "overall": 78, "desc": "Defensor experiente." },
+        { "id": "monterocastillo_uru_1970", "name": "Julio Montero Castillo", "positions": ["DM"], "overall": 78, "desc": "Volante de marcação dura." },
+        { "id": "maneiro_uru_1970", "name": "Ildo Maneiro", "positions": ["CM"], "overall": 78, "desc": "Meia trabalhador." },
+        { "id": "esparrago_uru_1970", "name": "Víctor Espárrago", "positions": ["CM"], "overall": 79, "desc": "Chegada à área." },
+        { "id": "cubilla_uru_1970", "name": "Luis Cubilla", "positions": ["RW"], "overall": 81, "desc": "Ponta habilidoso." },
+        { "id": "rocha_uru_1970", "name": "Pedro Rocha", "positions": ["AM"], "overall": 83, "desc": "Craque celeste, elegância pura." }
+      ]
+    },
+    {
+      "id": "por_2006", "country": "Portugal", "flag": "🇵🇹", "year": 2006, "strength": 86, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "ricardo_por_2006", "name": "Ricardo", "positions": ["GK"], "overall": 82, "desc": "Herói nos pênaltis contra a Inglaterra." },
+        { "id": "miguel_por_2006", "name": "Miguel", "positions": ["RB"], "overall": 78, "desc": "Lateral ofensivo." },
+        { "id": "ricardocarvalho_por_2006", "name": "Ricardo Carvalho", "positions": ["CB"], "overall": 84, "desc": "Zaga de primeira linha." },
+        { "id": "meira_por_2006", "name": "Fernando Meira", "positions": ["CB"], "overall": 79, "desc": "Defensor firme." },
+        { "id": "nunovalente_por_2006", "name": "Nuno Valente", "positions": ["LB"], "overall": 78, "desc": "Lateral-esquerdo titular." },
+        { "id": "costinha_por_2006", "name": "Costinha", "positions": ["DM"], "overall": 79, "desc": "Volante de contenção." },
+        { "id": "maniche_por_2006", "name": "Maniche", "positions": ["CM"], "overall": 83, "desc": "Chegada e gols do meio." },
+        { "id": "deco_por_2006", "name": "Deco", "positions": ["AM"], "overall": 86, "desc": "Maestro luso-brasileiro." },
+        { "id": "figo_por_2006", "name": "Luís Figo", "positions": ["RW"], "overall": 86, "desc": "Capitão e craque pela direita." },
+        { "id": "cristiano_por_2006", "name": "Cristiano Ronaldo", "positions": ["RW", "LW"], "overall": 87, "desc": "Jovem CR7, drible e ousadia." },
+        { "id": "pauleta_por_2006", "name": "Pauleta", "positions": ["ST"], "overall": 83, "desc": "Artilheiro histórico de Portugal." }
+      ]
+    },
+    {
+      "id": "cro_2018", "country": "Croácia", "flag": "🇭🇷", "year": 2018, "strength": 88, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "subasic_cro_2018", "name": "Danijel Subašić", "positions": ["GK"], "overall": 81, "desc": "Pegador de pênaltis no mata-mata." },
+        { "id": "vrsaljko_cro_2018", "name": "Šime Vrsaljko", "positions": ["RB"], "overall": 80, "desc": "Lateral aplicado dos dois lados." },
+        { "id": "lovren_cro_2018", "name": "Dejan Lovren", "positions": ["CB"], "overall": 82, "desc": "Zaga combativa." },
+        { "id": "vida_cro_2018", "name": "Domagoj Vida", "positions": ["CB"], "overall": 81, "desc": "Defensor de área." },
+        { "id": "strinic_cro_2018", "name": "Ivan Strinić", "positions": ["LB"], "overall": 78, "desc": "Lateral-esquerdo titular." },
+        { "id": "brozovic_cro_2018", "name": "Marcelo Brozović", "positions": ["DM"], "overall": 82, "desc": "Volante de muito pulmão." },
+        { "id": "rakitic_cro_2018", "name": "Ivan Rakitić", "positions": ["CM"], "overall": 86, "desc": "Meia completo e frio nos pênaltis." },
+        { "id": "modric_cro_2018", "name": "Luka Modrić", "positions": ["CM", "AM"], "overall": 91, "desc": "Bola de Ouro, maestro absoluto." },
+        { "id": "perisic_cro_2018", "name": "Ivan Perišić", "positions": ["LW"], "overall": 84, "desc": "Potência e gols pela esquerda." },
+        { "id": "rebic_cro_2018", "name": "Ante Rebić", "positions": ["RW", "ST"], "overall": 80, "desc": "Velocidade e intensidade." },
+        { "id": "mandzukic_cro_2018", "name": "Mario Mandžukić", "positions": ["ST"], "overall": 84, "desc": "Centroavante guerreiro, gol na final." }
+      ]
+    },
+    {
+      "id": "col_1994", "country": "Colômbia", "flag": "🇨🇴", "year": 1994, "strength": 82, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "cordoba_col_1994", "name": "Óscar Córdoba", "positions": ["GK"], "overall": 80, "desc": "Goleiro confiável." },
+        { "id": "herrera_col_1994", "name": "Luis Herrera", "positions": ["RB"], "overall": 76, "desc": "Lateral batalhador." },
+        { "id": "escobar_col_1994", "name": "Andrés Escobar", "positions": ["CB"], "overall": 79, "desc": "Zagueiro elegante, o cavalheiro do futebol." },
+        { "id": "perea_col_1994", "name": "Luis Carlos Perea", "positions": ["CB"], "overall": 77, "desc": "Marcação firme." },
+        { "id": "alvarez_col_1994", "name": "Leonel Álvarez", "positions": ["DM"], "overall": 78, "desc": "Volante combativo." },
+        { "id": "lozano_col_1994", "name": "Harold Lozano", "positions": ["CM"], "overall": 76, "desc": "Meia de ligação." },
+        { "id": "rincon_col_1994", "name": "Freddy Rincón", "positions": ["CM"], "overall": 83, "desc": "Força e gol do meio-campo." },
+        { "id": "valderrama_col_1994", "name": "Carlos Valderrama", "positions": ["AM"], "overall": 87, "desc": "El Pibe, passes mágicos." },
+        { "id": "asprilla_col_1994", "name": "Faustino Asprilla", "positions": ["ST"], "overall": 84, "desc": "Tino, imprevisível e veloz." },
+        { "id": "valencia_col_1994", "name": "Adolfo Valencia", "positions": ["ST"], "overall": 80, "desc": "El Tren, força no ataque." }
+      ]
+    },
+    {
+      "id": "mex_1986", "country": "México", "flag": "🇲🇽", "year": 1986, "strength": 82, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "larios_mex_1986", "name": "Pablo Larios", "positions": ["GK"], "overall": 79, "desc": "Goleiro da campanha em casa." },
+        { "id": "amador_mex_1986", "name": "Mario Trejo", "positions": ["RB"], "overall": 75, "desc": "Lateral marcador." },
+        { "id": "quirarte_mex_1986", "name": "Fernando Quirarte", "positions": ["CB"], "overall": 78, "desc": "Zaga líder, gols de bola parada." },
+        { "id": "servin_mex_1986", "name": "Raúl Servín", "positions": ["CB"], "overall": 76, "desc": "Defensor firme." },
+        { "id": "aguirre_mex_1986", "name": "Javier Aguirre", "positions": ["DM"], "overall": 78, "desc": "Vasco, volante de marcação." },
+        { "id": "boy_mex_1986", "name": "Tomás Boy", "positions": ["CM"], "overall": 80, "desc": "Capitão e cérebro do meio." },
+        { "id": "negrete_mex_1986", "name": "Manuel Negrete", "positions": ["AM"], "overall": 82, "desc": "Golaço de voleio inesquecível." },
+        { "id": "flores_mex_1986", "name": "Luis Flores", "positions": ["RW"], "overall": 78, "desc": "Velocidade pela direita." },
+        { "id": "hermosillo_mex_1986", "name": "Carlos Hermosillo", "positions": ["ST"], "overall": 80, "desc": "Centroavante jovem e forte." },
+        { "id": "sanchez_mex_1986", "name": "Hugo Sánchez", "positions": ["ST"], "overall": 88, "desc": "Hugol, o maior craque mexicano." }
+      ]
+    },
+    {
+      "id": "cmr_1990", "country": "Camarões", "flag": "🇨🇲", "year": 1990, "strength": 80, "weight": 1, "isBonus": false,
+      "players": [
+        { "id": "nkono_cmr_1990", "name": "Thomas N'Kono", "positions": ["GK"], "overall": 81, "desc": "Goleiro lendário dos Leões." },
+        { "id": "tataw_cmr_1990", "name": "Stephen Tataw", "positions": ["RB"], "overall": 77, "desc": "Capitão e lateral guerreiro." },
+        { "id": "kunde_cmr_1990", "name": "Emmanuel Kundé", "positions": ["CB"], "overall": 78, "desc": "Zaga experiente, cobra pênaltis." },
+        { "id": "massing_cmr_1990", "name": "Benjamin Massing", "positions": ["CB"], "overall": 76, "desc": "Marcação pesada." },
+        { "id": "kanabiyik_cmr_1990", "name": "André Kana-Biyik", "positions": ["CB"], "overall": 76, "desc": "Defensor combativo." },
+        { "id": "mfede_cmr_1990", "name": "Louis-Paul M'Fédé", "positions": ["CM"], "overall": 77, "desc": "Meia criativo." },
+        { "id": "makanaky_cmr_1990", "name": "Cyrille Makanaky", "positions": ["AM"], "overall": 79, "desc": "Habilidade e drible." },
+        { "id": "mbouh_cmr_1990", "name": "Emile Mbouh", "positions": ["DM"], "overall": 76, "desc": "Volante de marcação." },
+        { "id": "omambiyik_cmr_1990", "name": "François Omam-Biyik", "positions": ["ST"], "overall": 81, "desc": "Gol histórico sobre a Argentina." },
+        { "id": "milla_cmr_1990", "name": "Roger Milla", "positions": ["ST"], "overall": 85, "desc": "Lenda, a dança no córner aos 38 anos." }
+      ]
+    },
+    {
+      "id": "modulo_2012", "country": "Colégio Módulo", "flag": "🎓", "year": 2012, "strength": 88, "weight": 0.25, "isBonus": true,
+      "players": [
+        { "id": "deco_mod_2012", "name": "Deco", "positions": ["GK"], "overall": 90, "desc": "Paredão embaixo das traves." },
+        { "id": "murilo_mod_2012", "name": "Murilo", "positions": ["RW"], "overall": 91, "desc": "Velocidade e drible pela direita." },
+        { "id": "biel_mod_2012", "name": "Biel", "positions": ["AM", "LW"], "overall": 91, "desc": "Criatividade e finalização." },
+        { "id": "vini_mod_2012", "name": "Vini", "positions": ["ALL"], "overall": 99, "desc": "Coringa: joga em qualquer lugar do campo." },
+        { "id": "ricardo_mod_2012", "name": "Ricardo", "positions": ["CB"], "overall": 65, "desc": "Zaga raçuda, mais coração que técnica." },
+        { "id": "luceval_mod_2012", "name": "Luceval", "positions": ["LB"], "overall": 80, "desc": "Sobe e desce a lateral o jogo todo." },
+        { "id": "joaomanoel_mod_2012", "name": "João Manoel", "positions": ["RB"], "overall": 85, "desc": "Lateral seguro na marcação." }
+      ]
+    },
+    {
+      "id": "modulo_2013", "country": "Colégio Módulo", "flag": "🎓", "year": 2013, "strength": 88, "weight": 0.25, "isBonus": true,
+      "players": [
+        { "id": "deco_mod_2013", "name": "Deco", "positions": ["GK"], "overall": 90, "desc": "Paredão embaixo das traves." },
+        { "id": "murilo_mod_2013", "name": "Murilo", "positions": ["RW"], "overall": 91, "desc": "Velocidade e drible pela direita." },
+        { "id": "biel_mod_2013", "name": "Biel", "positions": ["AM", "LW"], "overall": 91, "desc": "Criatividade e finalização." },
+        { "id": "vini_mod_2013", "name": "Vini", "positions": ["ALL"], "overall": 99, "desc": "Coringa: joga em qualquer lugar do campo." },
+        { "id": "ricardo_mod_2013", "name": "Ricardo", "positions": ["CB"], "overall": 65, "desc": "Zaga raçuda, mais coração que técnica." },
+        { "id": "luceval_mod_2013", "name": "Luceval", "positions": ["LB"], "overall": 80, "desc": "Sobe e desce a lateral o jogo todo." },
+        { "id": "joaomanoel_mod_2013", "name": "João Manoel", "positions": ["RB"], "overall": 85, "desc": "Lateral seguro na marcação." }
+      ]
+    },
+    {
+      "id": "modulo_2015", "country": "Colégio Módulo", "flag": "🎓", "year": 2015, "strength": 95, "weight": 0.25, "isBonus": true,
+      "players": [
+        { "id": "deco_mod_2015", "name": "Deco", "positions": ["GK"], "overall": 105, "desc": "Versão lendária no gol." },
+        { "id": "murilo_mod_2015", "name": "Murilo", "positions": ["RW", "AM"], "overall": 105, "desc": "Ataque e criação na mesma jogada." },
+        { "id": "biel_mod_2015", "name": "Biel", "positions": ["LW", "AM"], "overall": 105, "desc": "Pura magia pela esquerda." },
+        { "id": "vini_mod_2015", "name": "Vini", "positions": ["ALL"], "overall": 99, "desc": "Coringa: resolve em qualquer posição." },
+        { "id": "missani_mod_2015", "name": "Missani", "positions": ["ST"], "overall": 90, "desc": "Faro de gol na área." },
+        { "id": "vitormandrake_mod_2015", "name": "Vitor Mandrake", "positions": ["CM"], "overall": 85, "desc": "Maestro do meio-campo." },
+        { "id": "bad_mod_2015", "name": "BAD", "positions": ["CB"], "overall": 30, "desc": "A defesa pede orações." }
+      ]
+    },
+    {
+      "id": "modulo_2023", "country": "Colégio Módulo", "flag": "🎓", "year": 2023, "strength": 97, "weight": 0.25, "isBonus": true,
+      "players": [
+        { "id": "deco_mod_2023", "name": "Deco", "positions": ["GK"], "overall": 99, "desc": "Goleirão confiável." },
+        { "id": "murilo_mod_2023", "name": "Murilo", "positions": ["RW", "AM"], "overall": 99, "desc": "Desequilibra pela direita e cria." },
+        { "id": "biel_mod_2023", "name": "Biel", "positions": ["LW", "AM"], "overall": 99, "desc": "Talento pela esquerda e no meio." },
+        { "id": "vini_mod_2023", "name": "Vini", "positions": ["ALL"], "overall": 60, "desc": "Versão veterano — ainda quebra um galho em qualquer posição." },
+        { "id": "valente_mod_2023", "name": "Valente", "positions": ["AM", "CM"], "overall": 102, "desc": "Cérebro e motor do time." },
+        { "id": "piovesan_mod_2023", "name": "Piovesan", "positions": ["RW"], "overall": 101, "desc": "Imparável pela direita." },
+        { "id": "enzo_mod_2023", "name": "Enzo", "positions": ["ST"], "overall": 99, "desc": "Artilheiro nato." },
+        { "id": "jaco_mod_2023", "name": "Jaco", "positions": ["RB"], "overall": 85, "desc": "Lateral aplicado." },
+        { "id": "marcos_mod_2023", "name": "Marcos", "positions": ["RB", "CM"], "overall": 88, "desc": "Versátil entre defesa e meio." },
+        { "id": "danielprofessor_mod_2023", "name": "Daniel Professor", "positions": ["ALL"], "overall": 120, "desc": "O chefão. Joga em todas as posições e ainda dá aula. Boa sorte pra quem enfrentar." }
+      ]
+    }
+  ]
+}
