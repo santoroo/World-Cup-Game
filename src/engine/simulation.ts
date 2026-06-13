@@ -17,10 +17,13 @@ import type {
   TeamStrength,
 } from './types';
 
-const STYLE: Record<PlayStyle, { atk: number; def: number }> = {
-  defensivo: { atk: 0.9, def: 1.12 },
-  equilibrado: { atk: 1.0, def: 1.0 },
-  ofensivo: { atk: 1.13, def: 0.9 },
+// Style multipliers applied to the final expected-goals (lambda), not to the
+// raw indices — keeps the effect modest and predictable.
+// `atk` scales goals we score; `concede` scales goals we allow.
+const STYLE: Record<PlayStyle, { atk: number; concede: number }> = {
+  defensivo: { atk: 0.85, concede: 0.82 },
+  equilibrado: { atk: 1.0, concede: 1.0 },
+  ofensivo: { atk: 1.18, concede: 1.2 },
 };
 
 export const CAMPAIGN_STAGES = [
@@ -51,7 +54,12 @@ function teamOverall(s: {
   return s.attack * 0.25 + s.midfield * 0.22 + s.defense * 0.25 + s.goalkeeper * 0.12 + s.chemistry * 0.16;
 }
 
-/** Build an opponent from a real edition, scaled a touch by stage difficulty. */
+/**
+ * Build an opponent from a real edition. Stats are scaled down from the raw
+ * `strength` so they sit on the same scale as the user's *aggregated* team
+ * ratings (which top out lower than any single overall). Without this, every
+ * opponent would be systematically stronger than an equivalent user team.
+ */
 export function opponentFromEdition(edition: Edition, rng: Rng, stageBoost = 0): Opponent {
   const s = edition.strength + stageBoost;
   return {
@@ -59,11 +67,11 @@ export function opponentFromEdition(edition: Edition, rng: Rng, stageBoost = 0):
     name: `${edition.country} ${edition.year}`,
     flag: edition.flag,
     strength: s,
-    attack: Math.round(s + rng.range(-3, 3)),
-    midfield: Math.round(s - 1 + rng.range(-3, 3)),
-    defense: Math.round(s - 1 + rng.range(-3, 3)),
-    goalkeeper: Math.round(s - 2 + rng.range(-3, 3)),
-    chemistry: Math.round(80 + rng.range(-6, 12)),
+    attack: Math.round(s * 0.94 + rng.range(-2, 2)),
+    midfield: Math.round(s * 0.91 + rng.range(-2, 2)),
+    defense: Math.round(s * 0.93 + rng.range(-2, 2)),
+    goalkeeper: Math.round(s * 0.9 + rng.range(-2, 2)),
+    chemistry: Math.round(75 + rng.range(-4, 8)),
   };
 }
 
@@ -80,15 +88,19 @@ function poisson(lambda: number, rng: Rng): number {
 }
 
 function offensiveIndex(s: { attack: number; midfield: number; chemistry: number }): number {
-  return s.attack * 0.45 + s.midfield * 0.3 + s.chemistry * 0.25;
+  return s.attack * 0.55 + s.midfield * 0.3 + s.chemistry * 0.15;
 }
 function defensiveIndex(s: { defense: number; goalkeeper: number }): number {
-  return s.defense * 0.55 + s.goalkeeper * 0.45;
+  return s.defense * 0.6 + s.goalkeeper * 0.4;
 }
 
-function expectedGoals(offIndex: number, defIndex: number, styleAtk: number, styleDef: number): number {
-  const diff = offIndex * styleAtk - defIndex * styleDef;
-  return Math.max(0.12, Math.min(7.2, 1.3 + diff * 0.075));
+// Exponential model: each XG_SCALE points of attack-minus-defense edge roughly
+// multiplies expected goals by e. Lets clearly superior sides run up 5–7 goals
+// while keeping even matches around 1–2. No hard cap below blowout territory.
+const XG_BASE = 1.3;
+const XG_SCALE = 12.5;
+function expectedGoals(off: number, def: number): number {
+  return Math.max(0.08, Math.min(9, XG_BASE * Math.exp((off - def) / XG_SCALE)));
 }
 
 /** Pull chemistry toward consistency: high chem teams swing less. */
@@ -158,8 +170,8 @@ export function simulateMatch(
   const offB = offensiveIndex(opp);
   const defB = defensiveIndex(opp);
 
-  const lambdaA = expectedGoals(offA, defB, style.atk, style.def);
-  const lambdaB = expectedGoals(offB, defA, 1.0, 1.0);
+  const lambdaA = expectedGoals(offA, defB) * style.atk;
+  const lambdaB = expectedGoals(offB, defA) * style.concede;
 
   let homeGoals = applyConsistency(poisson(lambdaA, rng), lambdaA, user.strength.chemistry);
   let awayGoals = applyConsistency(poisson(lambdaB, rng), lambdaB, opp.chemistry);
@@ -207,8 +219,10 @@ export function pickOpponents(editions: Edition[], seed: string): Opponent[] {
   const sorted = [...reals].sort((a, b) => a.strength - b.strength);
   const n = sorted.length;
 
-  // Band index (0..n-1) per stage — rises toward the final.
-  const stageFrac = [0.2, 0.35, 0.5, 0.6, 0.72, 0.85, 0.97];
+  // Band index (0..n-1) per stage — group games face the weakest sides, then
+  // difficulty ramps toward an elite final. Gives good teams a warm-up (and a
+  // shot at a group-stage goleada) while keeping the latter rounds tough.
+  const stageFrac = [0.04, 0.16, 0.3, 0.46, 0.62, 0.78, 0.9];
   const used = new Set<string>();
   const opponents: Opponent[] = [];
 
@@ -226,7 +240,7 @@ export function pickOpponents(editions: Edition[], seed: string): Opponent[] {
     }
     if (!pick) pick = sorted[target];
     used.add(pick.id);
-    const stageBoost = i >= 3 ? (i - 2) * 1.2 : 0;
+    const stageBoost = i >= 3 ? (i - 2) * 0.4 : 0;
     opponents.push(opponentFromEdition(pick, rng, stageBoost));
   }
   return opponents;

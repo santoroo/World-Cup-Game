@@ -12,6 +12,9 @@ import {
   isComplete,
   computeTeamStrength,
   simulateCampaign,
+  FORMATIONS,
+  type PlacedPlayer,
+  type Formation,
   type RawEdition,
 } from './index';
 
@@ -95,5 +98,45 @@ describe('draft + simulation', () => {
     expect(campaign.goalsFor).toBe(campaign2.goalsFor);
     expect(campaign.matches.length).toBeGreaterThan(0);
     expect(campaign.matches.length).toBeLessThanOrEqual(7);
+  });
+});
+
+// Build the strongest legal XI directly (no dice) — used to check that a clearly
+// superior side is rewarded the way the spec demands.
+function buildBestTeam(formation: Formation): PlacedPlayer[] {
+  const all = EDITIONS.flatMap((e) => e.players);
+  const used = new Set<string>();
+  return FORMATIONS[formation].map((slot) => {
+    const pick = all
+      .filter((p) => !used.has(p.id) && evaluateFit(p, slot.position).allowed)
+      .sort((a, b) => {
+        const fa = evaluateFit(a, slot.position);
+        const fb = evaluateFit(b, slot.position);
+        return Number(!fb.outOfPosition) - Number(!fa.outOfPosition) || b.overall - a.overall;
+      })[0];
+    used.add(pick.id);
+    const fit = evaluateFit(pick, slot.position);
+    return { slotId: slot.id, player: pick, fitMultiplier: fit.fitMultiplier, outOfPosition: fit.outOfPosition };
+  });
+}
+
+describe('balance (regression)', () => {
+  it('a near-max team dominates and a 7-0 is reachable', () => {
+    const placed = buildBestTeam('4-3-3');
+    const strength = computeTeamStrength(placed, '4-3-3');
+    let champions = 0;
+    let sevenNil = 0;
+    const RUNS = 80;
+    for (let i = 0; i < RUNS; i++) {
+      const camp = simulateCampaign(
+        { name: 'Max', flag: '⭐', style: 'ofensivo', strength, placed },
+        EDITIONS,
+        `reg-${i}`,
+      );
+      if (camp.champion) champions++;
+      if (camp.hadSeteAZero) sevenNil++;
+    }
+    expect(champions).toBeGreaterThan(RUNS * 0.6); // clearly superior → wins most
+    expect(sevenNil).toBeGreaterThan(0); // 7-0 raro mas possível
   });
 });
