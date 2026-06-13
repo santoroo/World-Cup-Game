@@ -8,6 +8,10 @@ import {
   computeTeamStrength,
   createDraft,
   choosePlayer as engineChoose,
+  placeInSlot as enginePlaceInSlot,
+  movePlayer as engineMove,
+  swapPlayers as engineSwap,
+  freeSkipsLeft,
   isComplete,
   registerSkip,
   roll as engineRoll,
@@ -22,6 +26,7 @@ import {
   type GameMode,
   type PlayStyle,
   type Player,
+  type Slot,
   type TeamSnapshot,
 } from '../engine';
 import { EDITIONS } from '../lib/editions';
@@ -74,6 +79,9 @@ interface GameContextValue extends GameState {
   startDraft: (config: SetupConfig) => void;
   rollDice: () => Edition | null;
   confirmPlayer: (player: Player) => void;
+  confirmPlayerInSlot: (player: Player, slot: Slot) => void;
+  repositionPlayer: (fromSlotId: string, toSlotId: string) => void;
+  swapPlacedPlayers: (slotIdA: string, slotIdB: string) => void;
   skipRoll: () => void;
   finishDraft: () => void;
   runSimulation: () => void;
@@ -129,8 +137,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const confirmPlayerInSlot = useCallback((player: Player, slot: Slot) => {
+    setState((s) => ({
+      ...s,
+      draft: enginePlaceInSlot(s.draft, player, slot),
+      rolledEdition: null,
+    }));
+  }, []);
+
+  const repositionPlayer = useCallback((fromSlotId: string, toSlotId: string) => {
+    setState((s) => ({ ...s, draft: engineMove(s.draft, fromSlotId, toSlotId) }));
+  }, []);
+
+  const swapPlacedPlayers = useCallback((slotIdA: string, slotIdB: string) => {
+    setState((s) => ({ ...s, draft: engineSwap(s.draft, slotIdA, slotIdB) }));
+  }, []);
+
   const skipRoll = useCallback(() => {
-    setState((s) => ({ ...s, draft: registerSkip(s.draft), rolledEdition: null }));
+    setState((s) => {
+      // Hard limit: ignore once free skips are exhausted.
+      if (freeSkipsLeft(s.draft) <= 0) return s;
+      return { ...s, draft: registerSkip(s.draft), rolledEdition: null };
+    });
   }, []);
 
   const finishDraft = useCallback(() => {
@@ -197,6 +225,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       startDraft,
       rollDice,
       confirmPlayer,
+      confirmPlayerInSlot,
+      repositionPlayer,
+      swapPlacedPlayers,
       skipRoll,
       finishDraft,
       runSimulation,
@@ -204,7 +235,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       restart,
       loadSharedResult,
     }),
-    [state, goHome, goToSetup, startDraft, rollDice, confirmPlayer, skipRoll, finishDraft, runSimulation, goFinal, restart, loadSharedResult],
+    [state, goHome, goToSetup, startDraft, rollDice, confirmPlayer, confirmPlayerInSlot, repositionPlayer, swapPlacedPlayers, skipRoll, finishDraft, runSimulation, goFinal, restart, loadSharedResult],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

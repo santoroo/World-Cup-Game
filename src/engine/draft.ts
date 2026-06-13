@@ -134,11 +134,54 @@ export function choosePlayer(state: DraftState, player: Player): DraftState {
   return placeInSlot(state, player, slot);
 }
 
+/** Open slots a player can legally fill (for the position picker). */
+export function eligibleOpenSlots(state: DraftState, player: Player): Slot[] {
+  return openSlots(state).filter((s) => evaluateFit(player, s.position).allowed);
+}
+
+function rebuildPlaced(player: Player, slot: Slot): PlacedPlayer {
+  const fit = evaluateFit(player, slot.position);
+  return { slotId: slot.id, player, fitMultiplier: fit.fitMultiplier, outOfPosition: fit.outOfPosition };
+}
+
+/** Move an already-placed player to an empty slot they can fill. */
+export function movePlayer(state: DraftState, fromSlotId: string, toSlotId: string): DraftState {
+  const moving = state.placed.find((p) => p.slotId === fromSlotId);
+  const toSlot = allSlots(state).find((s) => s.id === toSlotId);
+  if (!moving || !toSlot) return state;
+  if (state.placed.some((p) => p.slotId === toSlotId)) return state; // occupied
+  if (!evaluateFit(moving.player, toSlot.position).allowed) return state;
+  return {
+    ...state,
+    placed: state.placed.map((p) => (p.slotId === fromSlotId ? rebuildPlaced(moving.player, toSlot) : p)),
+  };
+}
+
+/** Swap two placed players, recomputing each fit. Only if both can fill the other's slot. */
+export function swapPlayers(state: DraftState, slotIdA: string, slotIdB: string): DraftState {
+  if (slotIdA === slotIdB) return state;
+  const a = state.placed.find((p) => p.slotId === slotIdA);
+  const b = state.placed.find((p) => p.slotId === slotIdB);
+  const slotA = allSlots(state).find((s) => s.id === slotIdA);
+  const slotB = allSlots(state).find((s) => s.id === slotIdB);
+  if (!a || !b || !slotA || !slotB) return state;
+  if (!evaluateFit(a.player, slotB.position).allowed || !evaluateFit(b.player, slotA.position).allowed) return state;
+  return {
+    ...state,
+    placed: state.placed.map((p) => {
+      if (p.slotId === slotIdA) return rebuildPlaced(b.player, slotA);
+      if (p.slotId === slotIdB) return rebuildPlaced(a.player, slotB);
+      return p;
+    }),
+  };
+}
+
 export function freeSkipsLeft(state: DraftState): number {
   return Math.max(0, MAX_FREE_SKIPS - state.skipsUsed);
 }
 
-/** Register a skip (used when the player re-rolls without choosing). */
+/** Register a skip if any remain (hard limit of MAX_FREE_SKIPS). No-op past the cap. */
 export function registerSkip(state: DraftState): DraftState {
+  if (freeSkipsLeft(state) <= 0) return state;
   return { ...state, skipsUsed: state.skipsUsed + 1 };
 }

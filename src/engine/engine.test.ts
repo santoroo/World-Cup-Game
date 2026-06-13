@@ -8,6 +8,12 @@ import {
   createDraft,
   roll,
   choosePlayer,
+  placeInSlot,
+  movePlayer,
+  swapPlayers,
+  registerSkip,
+  freeSkipsLeft,
+  MAX_FREE_SKIPS,
   pickablePlayers,
   isComplete,
   computeTeamStrength,
@@ -119,6 +125,44 @@ function buildBestTeam(formation: Formation): PlacedPlayer[] {
     return { slotId: slot.id, player: pick, fitMultiplier: fit.fitMultiplier, outOfPosition: fit.outOfPosition };
   });
 }
+
+describe('skip limit', () => {
+  it('caps skips at MAX_FREE_SKIPS and never goes past it', () => {
+    let s = createDraft('skip', '4-3-3');
+    for (let i = 0; i < 10; i++) s = registerSkip(s);
+    expect(s.skipsUsed).toBe(MAX_FREE_SKIPS);
+    expect(freeSkipsLeft(s)).toBe(0);
+  });
+});
+
+describe('reposition (move / swap)', () => {
+  const slot = (id: string) => FORMATIONS['4-3-3'].find((x) => x.id === id)!;
+  const player = (pred: (p: PlacedPlayer['player']) => boolean) =>
+    EDITIONS.flatMap((e) => e.players).find(pred)!;
+
+  it('moves a placed player to an empty eligible slot, but blocks illegal moves', () => {
+    const st = player((p) => p.positions.includes('ST') && !p.positions.includes('GK'));
+    let s = createDraft('mv', '4-3-3');
+    s = placeInSlot(s, st, slot('ST'));
+
+    const moved = movePlayer(s, 'ST', 'LW'); // ST -> LW is allowed (small penalty)
+    expect(moved.placed.find((p) => p.slotId === 'LW')?.player.id).toBe(st.id);
+    expect(moved.placed.find((p) => p.slotId === 'ST')).toBeUndefined();
+
+    const blocked = movePlayer(s, 'ST', 'GK'); // outfield -> goal is forbidden
+    expect(blocked).toBe(s);
+  });
+
+  it('swaps two compatible placed players', () => {
+    const cbs = EDITIONS.flatMap((e) => e.players).filter((p) => p.positions.includes('CB')).slice(0, 2);
+    let s = createDraft('sw', '4-3-3');
+    s = placeInSlot(s, cbs[0], slot('CB1'));
+    s = placeInSlot(s, cbs[1], slot('CB2'));
+    const swapped = swapPlayers(s, 'CB1', 'CB2');
+    expect(swapped.placed.find((p) => p.slotId === 'CB1')?.player.id).toBe(cbs[1].id);
+    expect(swapped.placed.find((p) => p.slotId === 'CB2')?.player.id).toBe(cbs[0].id);
+  });
+});
 
 describe('balance (regression)', () => {
   it('a near-max team dominates and a 7-0 is reachable', () => {
