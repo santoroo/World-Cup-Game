@@ -2,6 +2,8 @@
 // Engine types — pure domain model, no React/DOM dependencies.
 // ============================================================================
 
+import type { ChutePenalti } from './penaltis';
+
 /** Posições jogáveis. `ALL` = coringa (qualquer vaga, sem penalidade). */
 export type Position =
   | 'GK'
@@ -167,6 +169,8 @@ export interface MatchResult {
   blurb: string;
   win: boolean;
   draw: boolean;
+  /** Disputa de pênaltis (só em empates no mata-mata). 'a' = mandante/usuário. */
+  penaltis?: { golsA: number; golsB: number; historico: ChutePenalti[]; vencedorLado: 'a' | 'b' } | null;
 }
 
 export interface CampaignResult {

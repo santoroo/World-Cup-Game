@@ -203,13 +203,28 @@ export function armarPrazo(disputa: DisputaPenaltis, agora: number, msPorChute: 
 
 /**
  * Roda a disputa inteira automaticamente (direções sorteadas) — usada no solo e
- * em testes. Totalmente determinística por seed.
+ * em testes. Determinística por seed. `favorA` (~[-0.33, 0.33]) inclina o
+ * resultado pro lado A (time mais forte): o goleiro adversário "acerta o canto"
+ * menos nas cobranças de A e mais nas de B, então A converte mais. 0 = neutro.
  */
-export function gerarDisputaAutomatica(partidaId: string, aId: string, bId: string, seed: string): DisputaPenaltis {
+export function gerarDisputaAutomatica(
+  partidaId: string,
+  aId: string,
+  bId: string,
+  seed: string,
+  favorA = 0,
+): DisputaPenaltis {
   let d = criarDisputa(partidaId, aId, bId, seed);
   let guard = 0;
   while (!d.encerrada && guard++ < 200) {
-    d = autoCompletarDirecoes(d);
+    const rng = createRng(`${d.seed}#pen#${d.numeroChute}#auto`);
+    const chute = rng.pick(DIRECOES_PENALTI);
+    // Goleiro acerta o canto com probabilidade ajustada por quem cobra.
+    const vies = d.vez === 'a' ? -favorA : favorA;
+    const pAcerto = Math.max(0.05, Math.min(0.95, 1 / 3 + vies));
+    const defesa = rng.chance(pAcerto) ? chute : rng.pick(DIRECOES_PENALTI.filter((x) => x !== chute));
+    d = definirDirecao(d, 'chute', chute);
+    d = definirDirecao(d, 'defesa', defesa);
     d = resolverChutePendente(d, 0, 0);
   }
   return d;

@@ -264,15 +264,22 @@ export function simulateMatch(
   let win = homeGoals > awayGoals;
   let draw = homeGoals === awayGoals;
   let penalties: string | null = null;
+  let penaltisSeq: MatchResult['penaltis'] = null;
 
-  // Knockouts can't end level: resolve on penalties weighted by overall.
+  // Mata-mata não pode terminar empatado: vai pra disputa de pênaltis automática,
+  // inclinada (sem garantir) pelo overall — o time melhor converte mais.
   if (draw && opts.knockout) {
-    const ovA = teamOverall(user.strength);
-    const ovB = teamOverall(opp);
-    const prob = Math.max(0.15, Math.min(0.85, 0.5 + (ovA - ovB) / 120));
-    const userWon = rng.chance(prob);
+    const favorA = Math.max(-0.25, Math.min(0.25, (teamOverall(user.strength) - teamOverall(opp)) / 160));
+    const disputa = gerarDisputaAutomatica('campanha', 'home', 'away', `${seed}#pen`, favorA);
+    const userWon = disputa.vencedorId === 'home';
     win = userWon;
     draw = false;
+    penaltisSeq = {
+      golsA: disputa.golsA,
+      golsB: disputa.golsB,
+      historico: disputa.historico,
+      vencedorLado: userWon ? 'a' : 'b',
+    };
     penalties = userWon ? 'Vitória nos pênaltis!' : 'Eliminado nos pênaltis.';
   }
 
@@ -296,7 +303,7 @@ export function simulateMatch(
 
   const blurb = penalties ? `${matchBlurb(homeGoals, awayGoals, win, false)} ${penalties}` : matchBlurb(homeGoals, awayGoals, win, draw);
 
-  return { stage, opponent: opp, homeGoals, awayGoals, homeScorers, awayScorers, homeRedCards, awayRedCards, manOfTheMatch: motm, blurb, win, draw };
+  return { stage, opponent: opp, homeGoals, awayGoals, homeScorers, awayScorers, homeRedCards, awayRedCards, manOfTheMatch: motm, blurb, win, draw, penaltis: penaltisSeq };
 }
 
 /** Pick 7 opponents from real editions with rising difficulty per stage. */

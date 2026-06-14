@@ -29,6 +29,12 @@ export function MatchCard({ match, teamName }: { match: MatchResult; teamName: s
         </div>
       </div>
 
+      {match.penaltis && (
+        <p className="mt-1 text-center text-[11px] font-semibold text-amber-300">
+          nos pênaltis: {match.penaltis.golsA} × {match.penaltis.golsB}
+        </p>
+      )}
+
       <p className="mt-2 text-center text-sm italic text-white/65">“{match.blurb}”</p>
 
       <div className="mt-2 flex flex-wrap justify-between gap-2 text-[11px] text-white/55">

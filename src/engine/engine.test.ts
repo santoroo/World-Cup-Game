@@ -275,6 +275,31 @@ describe('red cards (cosmetic)', () => {
   });
 });
 
+describe('pênaltis no solo (mata-mata)', () => {
+  it('empate no mata-mata vira disputa com sequência e vencedor coerente', () => {
+    const placed = buildBestTeam('4-3-3');
+    const strength = computeTeamStrength(placed, '4-3-3');
+    const user: UserTeamInput = { name: 'U', flag: '⭐', style: 'equilibrado', strength, placed };
+    const opp: Opponent = {
+      id: 'o', name: 'Rival', flag: '⚽', strength: strength.overall,
+      attack: strength.attack, midfield: strength.midfield, defense: strength.defense,
+      goalkeeper: strength.goalkeeper, chemistry: strength.chemistry,
+    };
+
+    let comPen: ReturnType<typeof simulateMatch> | null = null;
+    for (let i = 0; i < 300 && !comPen; i++) {
+      const m = simulateMatch(user, opp, 'Final', `solo-pen-${i}`, { knockout: true });
+      if (m.penaltis) comPen = m;
+    }
+    expect(comPen, 'esperava um empate no mata-mata em 300 seeds').not.toBeNull();
+    const p = comPen!.penaltis!;
+    expect(comPen!.draw).toBe(false); // pênaltis sempre dão um vencedor
+    expect(p.historico.length).toBeGreaterThanOrEqual(2);
+    expect(p.golsA).not.toBe(p.golsB);
+    expect(p.vencedorLado).toBe(comPen!.win ? 'a' : 'b'); // animação bate com o resultado
+  });
+});
+
 describe('balance (regression)', () => {
   it('a near-max team dominates and a 7-0 is reachable', () => {
     const placed = buildBestTeam('4-3-3');
