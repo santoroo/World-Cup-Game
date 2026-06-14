@@ -153,7 +153,7 @@ function agendarPrazoPenalti(room: ServerRoom): void {
     room.penaltiTimer = undefined;
     const atual = room.state.disputaPenaltis;
     if (!atual || atual.encerrada || atual.prazo == null) return;
-    room.state = timeoutPenalti(room.state, Date.now());
+    room.state = timeoutPenalti(room.state, EDITIONS, Date.now());
     broadcast(room);
     agendarPrazoPenalti(room); // próxima cobrança (ou próxima disputa)
   }, restante + 30);
@@ -259,7 +259,7 @@ function handleInRoom(ws: WebSocket, msg: Exclude<ClientMsg, { t: 'create' } | {
       room.state = marcarProntoPenalti(room.state, me, Date.now());
       break;
     case 'penalti':
-      room.state = definirDirecaoPenalti(room.state, me, msg.dir, Date.now());
+      room.state = definirDirecaoPenalti(room.state, EDITIONS, me, msg.dir, Date.now());
       break;
     case 'rematch':
       if (me !== room.state.hostId) return sendError(ws, 'bad_request', 'Só o anfitrião reinicia.');

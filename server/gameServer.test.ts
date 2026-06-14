@@ -171,7 +171,8 @@ describe('gameServer integration', () => {
 
       expect(host.state!.phase).toBe('bracket');
       const champ = host.state!.bracket!.championId;
-      expect(host.state!.players.map((p) => p.id)).toContain(champ);
+      expect(champ).not.toBeNull(); // campeão coroado (humano ou seleção da CPU)
+      expect(host.state!.grupos!.classificados).toContain(champ);
       // Every client agrees on the same champion (single source of truth).
       for (const c of clients) {
         await c.waitFor((x) => x.state!.bracket?.championId === champ);

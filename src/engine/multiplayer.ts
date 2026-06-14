@@ -136,6 +136,8 @@ export interface RoomState {
   rolledEditionId: string | null;
   /** Monotonic roll counter — feeds deterministic roll seeds. */
   rollNonce: number;
+  /** Fase de grupos (computada ao fim do draft). null = ainda não. */
+  grupos: FaseGrupos | null;
   bracket: Bracket | null;
   /** Disputa de pênaltis em andamento (pausa o chaveamento). null = nenhuma. */
   disputaPenaltis: DisputaPenaltis | null;
@@ -160,6 +162,7 @@ export function createRoom(id: string, seed: string, hostId: string, mode: GameM
     currentId: null,
     rolledEditionId: null,
     rollNonce: 0,
+    grupos: null,
     bracket: null,
     disputaPenaltis: null,
   };
@@ -372,12 +375,15 @@ export function pickFor(
   const players = clonePlayers(room);
   players[idx] = { ...player, placed: updatedPlaced };
 
-  const advanced = advanceTurn({
-    ...room,
-    players,
-    usedPlayerIds: [...room.usedPlayerIds, chosen.id],
-    rolledEditionId: null,
-  });
+  const advanced = advanceTurn(
+    {
+      ...room,
+      players,
+      usedPlayerIds: [...room.usedPlayerIds, chosen.id],
+      rolledEditionId: null,
+    },
+    editions,
+  );
   return advanced;
 }
 
@@ -421,7 +427,7 @@ export function trocarFor(room: RoomState, playerId: string, slotIdA: string, sl
   return { ...room, players };
 }
 
-function advanceTurn(room: RoomState): RoomState {
+function advanceTurn(room: RoomState, editions: Edition[]): RoomState {
   let turnInRound = room.turnInRound + 1;
   let round = room.round;
   if (turnInRound >= room.order.length) {
@@ -429,7 +435,7 @@ function advanceTurn(room: RoomState): RoomState {
     round += 1;
   }
   if (round >= MP_SQUAD_SIZE || isDraftComplete(room)) {
-    return enterBracket(room);
+    return enterTorneio(room, editions);
   }
   return { ...room, round, turnInRound, currentId: currentIdFor(room.order, round, turnInRound) };
 }
@@ -490,25 +496,184 @@ function stageLabel(roundIndex: number, totalRounds: number): string {
   }
 }
 
-function toPvpTeam(p: MpPlayer): PvpTeam {
-  return { id: p.id, name: p.name, style: p.style, strength: p.strength!, placed: p.placed };
+// ---------------------------------------------------------------------------
+// Competidores: humanos (MpPlayer) e seleções da CPU (edições reais).
+// Ids: humano = player.id; CPU = `cpu:<editionId>`.
+// ---------------------------------------------------------------------------
+
+const PREFIXO_CPU = 'cpu:';
+
+export function ehCompetidorHumano(room: RoomState, id: string): boolean {
+  return !id.startsWith(PREFIXO_CPU) && !!getPlayer(room, id);
+}
+
+/** PvpTeam de uma seleção da CPU a partir da edição (determinístico, sem RNG). */
+function cpuPvpTeam(ed: Edition): PvpTeam {
+  const s = ed.strength;
+  const strength: TeamStrength = {
+    attack: Math.round(s * 0.94),
+    midfield: Math.round(s * 0.91),
+    defense: Math.round(s * 0.93),
+    goalkeeper: Math.round(s * 0.9),
+    chemistry: 80,
+    overall: s,
+    strengths: [],
+    weaknesses: [],
+  };
+  // Elenco da edição só pros nomes dos artilheiros (assignScorers pesa por ataque).
+  const placed: PlacedPlayer[] = ed.players.map((player) => ({ slotId: player.id, player, fitMultiplier: 1, outOfPosition: false }));
+  return { id: `${PREFIXO_CPU}${ed.id}`, name: `${ed.country} ${ed.year}`, style: 'equilibrado', strength, placed };
+}
+
+/** Resolve um competidor (humano ou CPU) num PvpTeam pra simular. */
+function competidorPvp(id: string, room: RoomState, editions: Edition[]): PvpTeam | null {
+  if (id.startsWith(PREFIXO_CPU)) {
+    const ed = editions.find((e) => e.id === id.slice(PREFIXO_CPU.length));
+    return ed ? cpuPvpTeam(ed) : null;
+  }
+  const p = getPlayer(room, id);
+  return p && p.strength ? { id: p.id, name: p.name, style: p.style, strength: p.strength, placed: p.placed } : null;
+}
+
+function competidorOverall(id: string, room: RoomState, editions: Edition[]): number {
+  return competidorPvp(id, room, editions)?.strength.overall ?? 0;
+}
+
+// ---------------------------------------------------------------------------
+// Fase de grupos (estilo Copa do Mundo): cada humano num grupo de 4 com 3
+// seleções da CPU; round-robin; top 2 de cada grupo avançam. Determinística por
+// seed; sem pênaltis (empate vale ponto). CPU×CPU é instantâneo (só na tabela).
+// ---------------------------------------------------------------------------
+
+export interface JogoGrupo {
+  aId: string;
+  bId: string;
+  golsA: number;
+  golsB: number;
+  scorersA: Scorer[];
+  scorersB: Scorer[];
+  redCardsA: RedCard[];
+  redCardsB: RedCard[];
+  /** true se um dos lados é humano (jogo tocado ao vivo). */
+  comHumano: boolean;
+}
+
+export interface LinhaTabela {
+  competidorId: string;
+  pts: number;
+  v: number;
+  e: number;
+  d: number;
+  gp: number;
+  gc: number;
+  sg: number;
+}
+
+export interface Grupo {
+  nome: string;
+  competidores: string[];
+  jogos: JogoGrupo[];
+  /** Classificação ordenada (1º no topo). */
+  tabela: LinhaTabela[];
+}
+
+export interface FaseGrupos {
+  grupos: Grupo[];
+  /** Top 2 de cada grupo (1º colocados primeiro), pra semear o mata-mata. */
+  classificados: string[];
+}
+
+const TAM_GRUPO = 4;
+const NOMES_GRUPO = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+function calcularTabela(competidores: string[], jogos: JogoGrupo[]): LinhaTabela[] {
+  const tab = new Map<string, LinhaTabela>(
+    competidores.map((id) => [id, { competidorId: id, pts: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, sg: 0 }]),
+  );
+  for (const j of jogos) {
+    const a = tab.get(j.aId)!;
+    const b = tab.get(j.bId)!;
+    a.gp += j.golsA;
+    a.gc += j.golsB;
+    b.gp += j.golsB;
+    b.gc += j.golsA;
+    if (j.golsA > j.golsB) {
+      a.v++;
+      a.pts += 3;
+      b.d++;
+    } else if (j.golsB > j.golsA) {
+      b.v++;
+      b.pts += 3;
+      a.d++;
+    } else {
+      a.e++;
+      b.e++;
+      a.pts++;
+      b.pts++;
+    }
+  }
+  for (const l of tab.values()) l.sg = l.gp - l.gc;
+  return [...tab.values()].sort(
+    (x, y) => y.pts - x.pts || y.sg - x.sg || y.gp - x.gp || x.competidorId.localeCompare(y.competidorId),
+  );
+}
+
+/** Sorteia os grupos e simula a fase inteira. Determinística por seed. */
+export function gerarGrupos(room: RoomState, editions: Edition[]): FaseGrupos {
+  const humanos = room.order.length ? room.order : room.players.map((p) => p.id);
+  const nGrupos = humanos.length;
+  const precisa = nGrupos * (TAM_GRUPO - 1);
+  // Seleções da CPU vêm das edições mais fracas (como a fase de grupos do solo),
+  // pra os humanos costumarem se classificar e se cruzarem no mata-mata — com um
+  // pouco de variedade dentro do grupo das fracas.
+  const reais = editions.filter((e) => !e.isBonus).sort((a, b) => a.strength - b.strength);
+  const pool = reais.slice(0, Math.min(reais.length, precisa + 6));
+  const cpus = createRng(`${room.seed}#grupos`).shuffle(pool).slice(0, precisa);
+
+  const grupos: Grupo[] = [];
+  for (let g = 0; g < nGrupos; g++) {
+    const competidores = [humanos[g], ...cpus.slice(g * 3, g * 3 + 3).map((e) => `${PREFIXO_CPU}${e.id}`)];
+    const jogos: JogoGrupo[] = [];
+    for (let i = 0; i < competidores.length; i++) {
+      for (let j = i + 1; j < competidores.length; j++) {
+        const aId = competidores[i];
+        const bId = competidores[j];
+        const tn = simularPvpTempoNormal(
+          competidorPvp(aId, room, editions)!,
+          competidorPvp(bId, room, editions)!,
+          `${room.seed}#grupo#${g}#${i}-${j}`,
+        );
+        jogos.push({
+          aId,
+          bId,
+          golsA: tn.golsA,
+          golsB: tn.golsB,
+          scorersA: tn.scorersA,
+          scorersB: tn.scorersB,
+          redCardsA: tn.redCardsA,
+          redCardsB: tn.redCardsB,
+          comHumano: ehCompetidorHumano(room, aId) || ehCompetidorHumano(room, bId),
+        });
+      }
+    }
+    grupos.push({ nome: NOMES_GRUPO[g] ?? `${g + 1}`, competidores, jogos, tabela: calcularTabela(competidores, jogos) });
+  }
+
+  const primeiros = grupos.map((gr) => gr.tabela[0].competidorId);
+  const segundos = grupos.map((gr) => gr.tabela[1].competidorId);
+  return { grupos, classificados: [...primeiros, ...segundos] };
 }
 
 /**
- * Monta o esqueleto do chaveamento: round 0 com participantes/walkovers vindos do
- * sorteio por força; rounds seguintes com vagas vazias (preenchidas conforme os
- * confrontos vão sendo resolvidos). Os resultados começam todos nulos.
+ * Monta o esqueleto do chaveamento a partir dos competidores já semeados (os
+ * primeiros da lista pegam os byes). Resultados começam nulos.
  */
-function montarBracket(room: RoomState): Bracket {
-  // Seed by team overall (desc); top seeds earn the byes. Ties broken by id.
-  const seeded = [...room.players].sort(
-    (a, b) => (b.strength?.overall ?? 0) - (a.strength?.overall ?? 0) || a.id.localeCompare(b.id),
-  );
-  const n = seeded.length;
+function montarBracket(seededIds: string[]): Bracket {
+  const n = seededIds.length;
   const size = nextPow2(n);
   const totalRounds = Math.max(1, Math.log2(size));
   const order = seedOrder(size);
-  const participantesR0 = order.map((s) => (s - 1 < n ? seeded[s - 1].id : null));
+  const participantesR0 = order.map((s) => (s - 1 < n ? seededIds[s - 1] : null));
 
   const rounds: BracketMatch[][] = [];
   for (let ri = 0; ri < totalRounds; ri++) {
@@ -579,9 +744,8 @@ function montarResultado(
  * empate. Com `auto`, resolve empates por pênaltis automáticos (determinístico).
  * Sem `auto` (online), grava o tempo normal e cria a disputa interativa, pausando.
  */
-function avancarBracket(room: RoomState, opts: { auto?: boolean } = {}): RoomState {
+function avancarBracket(room: RoomState, editions: Edition[], opts: { auto?: boolean } = {}): RoomState {
   const bracket = clonarBracket(room.bracket!);
-  const byId = new Map(room.players.map((p) => [p.id, p]));
 
   for (let ri = 0; ri < bracket.rounds.length; ri++) {
     for (const m of bracket.rounds[ri]) {
@@ -599,7 +763,10 @@ function avancarBracket(room: RoomState, opts: { auto?: boolean } = {}): RoomSta
       // Lados ainda indefinidos (dependem de rounds anteriores) → espera.
       if (m.aId == null || m.bId == null) continue;
 
-      const tn = simularPvpTempoNormal(toPvpTeam(byId.get(m.aId)!), toPvpTeam(byId.get(m.bId)!), `${room.seed}#bracket#${m.id}`);
+      const a = competidorPvp(m.aId, room, editions);
+      const b = competidorPvp(m.bId, room, editions);
+      if (!a || !b) continue; // segurança: competidor não resolvido
+      const tn = simularPvpTempoNormal(a, b, `${room.seed}#bracket#${m.id}`);
       const seedPen = `${room.seed}#bracket#${m.id}#pen`;
 
       if (!tn.empate) {
@@ -608,13 +775,15 @@ function avancarBracket(room: RoomState, opts: { auto?: boolean } = {}): RoomSta
         propagar(bracket, ri, m.slot, vencedorId);
         continue;
       }
-      if (opts.auto) {
+      // Empate: pênaltis. Interativo só quando os DOIS lados são humanos.
+      const ambosHumanos = ehCompetidorHumano(room, m.aId) && ehCompetidorHumano(room, m.bId);
+      if (opts.auto || !ambosHumanos) {
         const disputa = gerarDisputaAutomatica(m.id, m.aId, m.bId, seedPen);
         m.result = montarResultado(m, tn, disputa.vencedorId!, disputa);
         propagar(bracket, ri, m.slot, disputa.vencedorId!);
         continue;
       }
-      // Online: grava o tempo normal pendente e cria a disputa interativa (pausa).
+      // Humano × humano → disputa interativa (pausa o chaveamento).
       m.result = montarResultado(m, tn, null, null);
       return { ...room, bracket, disputaPenaltis: criarDisputa(m.id, m.aId, m.bId, seedPen) };
     }
@@ -625,27 +794,47 @@ function avancarBracket(room: RoomState, opts: { auto?: boolean } = {}): RoomSta
   return { ...room, bracket: { ...bracket, championId }, disputaPenaltis: null };
 }
 
-/** Monta e resolve TODO o chaveamento automaticamente. Determinístico por seed. */
-export function buildBracket(room: RoomState): Bracket {
-  const base: RoomState = { ...room, bracket: montarBracket(room), disputaPenaltis: null };
-  return avancarBracket(base, { auto: true }).bracket!;
+/** Monta e resolve TODO um chaveamento só de humanos, automaticamente (determinístico). */
+export function buildBracket(room: RoomState, editions: Edition[]): Bracket {
+  const seeded = [...room.players]
+    .sort((a, b) => (b.strength?.overall ?? 0) - (a.strength?.overall ?? 0) || a.id.localeCompare(b.id))
+    .map((p) => p.id);
+  const base: RoomState = { ...room, bracket: montarBracket(seeded), disputaPenaltis: null };
+  return avancarBracket(base, editions, { auto: true }).bracket!;
 }
 
-function enterBracket(room: RoomState): RoomState {
+/**
+ * Fim do draft → torneio: fase de grupos (determinística) + mata-mata com os
+ * classificados (humanos + CPU). Pausa no 1º empate humano×humano.
+ */
+function enterTorneio(room: RoomState, editions: Edition[]): RoomState {
   const players = room.players.map((p) => ({
     ...p,
     strength: p.strength ?? computeTeamStrength(p.placed, p.formation),
   }));
-  const comStrength: RoomState = { ...room, players };
-  const staged: RoomState = {
-    ...comStrength,
+  const comStrength: RoomState = {
+    ...room,
+    players,
     phase: 'bracket',
     currentId: null,
     rolledEditionId: null,
     disputaPenaltis: null,
-    bracket: montarBracket(comStrength),
   };
-  return avancarBracket(staged);
+
+  const grupos = gerarGrupos(comStrength, editions);
+  // Semeia: 1º colocados (pegam os byes) antes dos 2º; cada bloco por overall desc.
+  const nGrupos = grupos.grupos.length;
+  const porForca = (ids: string[]) =>
+    [...ids].sort(
+      (x, y) => competidorOverall(y, comStrength, editions) - competidorOverall(x, comStrength, editions) || x.localeCompare(y),
+    );
+  const seeded = [
+    ...porForca(grupos.classificados.slice(0, nGrupos)),
+    ...porForca(grupos.classificados.slice(nGrupos)),
+  ];
+
+  const staged: RoomState = { ...comStrength, grupos, bracket: montarBracket(seeded) };
+  return avancarBracket(staged, editions);
 }
 
 // ---------------------------------------------------------------------------
@@ -663,7 +852,7 @@ function ladoDoJogador(d: DisputaPenaltis, playerId: string): 'a' | 'b' | null {
  * Um jogador escolheu uma direção: canto do chute (se é a vez dele) ou da defesa
  * (se é o goleiro). Resolve a cobrança quando os dois escolheram.
  */
-export function definirDirecaoPenalti(room: RoomState, playerId: string, dir: DirecaoPenalti, agora: number): RoomState {
+export function definirDirecaoPenalti(room: RoomState, editions: Edition[], playerId: string, dir: DirecaoPenalti, agora: number): RoomState {
   const d = room.disputaPenaltis;
   if (!d || d.encerrada || d.prazo == null) return room; // só depois que a disputa começa
   const lado = ladoDoJogador(d, playerId);
@@ -672,7 +861,7 @@ export function definirDirecaoPenalti(room: RoomState, playerId: string, dir: Di
   let nova = definirDirecao(d, papel, dir);
   if (ambasDirecoesDefinidas(nova)) nova = resolverChutePendente(nova, agora, MS_PRAZO_PENALTI);
   const r: RoomState = { ...room, disputaPenaltis: nova };
-  return nova.encerrada ? resolverDisputaConcluida(r) : r;
+  return nova.encerrada ? resolverDisputaConcluida(r, editions) : r;
 }
 
 /** Jogador terminou o replay 0'→90'. Quando os dois envolvidos terminam, arma a 1ª cobrança. */
@@ -685,17 +874,17 @@ export function marcarProntoPenalti(room: RoomState, playerId: string, agora: nu
 }
 
 /** O prazo da cobrança estourou: completa as direções que faltam e resolve. */
-export function timeoutPenalti(room: RoomState, agora: number): RoomState {
+export function timeoutPenalti(room: RoomState, editions: Edition[], agora: number): RoomState {
   const d = room.disputaPenaltis;
   if (!d || d.encerrada || d.prazo == null) return room;
   let nova = autoCompletarDirecoes(d);
   nova = resolverChutePendente(nova, agora, MS_PRAZO_PENALTI);
   const r: RoomState = { ...room, disputaPenaltis: nova };
-  return nova.encerrada ? resolverDisputaConcluida(r) : r;
+  return nova.encerrada ? resolverDisputaConcluida(r, editions) : r;
 }
 
 /** Grava o resultado da disputa encerrada no confronto e segue o chaveamento. */
-function resolverDisputaConcluida(room: RoomState): RoomState {
+function resolverDisputaConcluida(room: RoomState, editions: Edition[]): RoomState {
   const d = room.disputaPenaltis;
   if (!d || !d.encerrada || !room.bracket) return room;
   const bracket = clonarBracket(room.bracket);
@@ -711,7 +900,7 @@ function resolverDisputaConcluida(room: RoomState): RoomState {
       blurb: `Empate em ${m.result.a.goals} a ${m.result.b.goals}. Decisão nos pênaltis: ${maior} a ${menor}!`,
     };
   }
-  return avancarBracket({ ...room, bracket, disputaPenaltis: null });
+  return avancarBracket({ ...room, bracket, disputaPenaltis: null }, editions);
 }
 
 // ---------------------------------------------------------------------------
@@ -739,6 +928,7 @@ export function rematch(room: RoomState, newSeed: string): RoomState {
     currentId: null,
     rolledEditionId: null,
     rollNonce: 0,
+    grupos: null,
     bracket: null,
     disputaPenaltis: null,
   };

@@ -83,8 +83,8 @@ function resolverDisputasAteOFim(start: RoomState): RoomState {
     }
     const cobrador = d.vez === 'a' ? d.aId : d.bId;
     const defensor = d.vez === 'a' ? d.bId : d.aId;
-    room = definirDirecaoPenalti(room, cobrador, 'esquerda', 0);
-    room = definirDirecaoPenalti(room, defensor, 'direita', 0);
+    room = definirDirecaoPenalti(room, EDITIONS, cobrador, 'esquerda', 0);
+    room = definirDirecaoPenalti(room, EDITIONS, defensor, 'direita', 0);
   }
   return room;
 }
@@ -153,10 +153,12 @@ describe('mp draft', () => {
       expect(new Set(allIds).size).toBe(allIds.length);
       expect(allIds.length).toBe(n * MP_SQUAD_SIZE);
       expect(room.usedPlayerIds.length).toBe(n * MP_SQUAD_SIZE);
-      // Bracket produced exactly one champion among the players.
+      // Fase de grupos computada e um campeão coroado (humano OU seleção da CPU).
       expect(room.phase).toBe('bracket');
+      expect(room.grupos).not.toBeNull();
       expect(room.bracket).not.toBeNull();
-      expect(room.players.map((p) => p.id)).toContain(room.bracket!.championId);
+      expect(room.bracket!.championId).not.toBeNull();
+      expect(room.grupos!.classificados).toContain(room.bracket!.championId);
     });
   }
 
@@ -248,66 +250,74 @@ describe('mp posição (escolha de vaga, igual ao solo)', () => {
   });
 });
 
-describe('mp bracket shape', () => {
-  function finishedRoom(n: number, seed: string): RoomState {
-    return playFullDraft(lobby(n, seed), EDITIONS).room;
+describe('mp fase de grupos', () => {
+  const humanos = new Set<string>();
+  const ehHumano = (room: RoomState, id: string) => room.players.some((p) => p.id === id);
+
+  for (const n of [2, 3, 5]) {
+    it(`${n} humanos → ${n} grupos de 4 (1 humano + 3 CPU), top 2 classificam`, () => {
+      const room = playFullDraft(lobby(n, `g-${n}`), EDITIONS).room;
+      const fg = room.grupos!;
+      expect(fg).not.toBeNull();
+      expect(fg.grupos).toHaveLength(n);
+
+      humanos.clear();
+      for (const gr of fg.grupos) {
+        expect(gr.competidores).toHaveLength(4);
+        expect(gr.jogos).toHaveLength(6); // round-robin de 4 = 6 jogos
+        expect(gr.tabela).toHaveLength(4);
+        const humanosNoGrupo = gr.competidores.filter((id) => ehHumano(room, id));
+        expect(humanosNoGrupo).toHaveLength(1); // exatamente 1 humano por grupo
+        humanos.add(humanosNoGrupo[0]);
+      }
+      expect(humanos.size).toBe(n); // cada humano num grupo diferente
+      expect(fg.classificados).toHaveLength(2 * n); // top 2 de cada grupo
+    });
   }
 
-  it('2 players → a single Final', () => {
-    const room = finishedRoom(2, 'b2');
-    expect(room.bracket!.rounds).toHaveLength(1);
-    expect(room.bracket!.rounds[0][0].stageLabel).toBe('Final');
-    expect(room.bracket!.rounds[0][0].result).not.toBeNull();
+  it('o campeão é sempre um dos classificados (pode ser CPU)', () => {
+    const room = playFullDraft(lobby(2, 'champ-g'), EDITIONS).room;
+    expect(room.grupos!.classificados).toContain(room.bracket!.championId);
   });
 
-  it('3 players → top seed gets a bye into the Final', () => {
-    const room = finishedRoom(3, 'b3');
-    const rounds = room.bracket!.rounds;
-    expect(rounds).toHaveLength(2); // semis + final
-    const byes = rounds[0].filter((m) => m.byeId !== null);
-    expect(byes).toHaveLength(1); // exactly one walkover
-    expect(rounds[1][0].stageLabel).toBe('Final');
+  it('grupos determinísticos por seed', () => {
+    const a = playFullDraft(lobby(3, 'det-g'), EDITIONS).room;
+    const b = playFullDraft(lobby(3, 'det-g'), EDITIONS).room;
+    expect(JSON.stringify(a.grupos)).toBe(JSON.stringify(b.grupos));
   });
 
-  it('5 players → quarters/semis/final with three byes', () => {
-    const room = finishedRoom(5, 'b5');
-    const rounds = room.bracket!.rounds;
-    expect(rounds).toHaveLength(3);
-    expect(rounds[0]).toHaveLength(4); // 4 quarter slots in an 8-bracket
-    const byes = rounds[0].filter((m) => m.byeId !== null);
-    expect(byes).toHaveLength(3); // 8 - 5 = 3 walkovers
-    expect(rounds[2][0].stageLabel).toBe('Final');
-  });
-
-  it('every played tie has a winner that is one of its two sides', () => {
-    const room = finishedRoom(4, 'b4');
+  it('todo confronto resolvido do mata-mata tem um vencedor entre os dois lados', () => {
+    const room = playFullDraft(lobby(4, 'b4-g'), EDITIONS).room;
     for (const round of room.bracket!.rounds) {
       for (const m of round) {
-        if (!m.result) continue;
+        if (!m.result || !m.result.winnerId) continue;
         expect([m.aId, m.bId]).toContain(m.result.winnerId);
       }
     }
   });
 });
 
-describe('mp disputa de pênaltis (online, interativa)', () => {
-  // Procura um seed cujo chaveamento pause num empate (disputa interativa).
+describe('mp disputa de pênaltis (online, interativa, só humano×humano)', () => {
+  // A disputa só é criada quando os DOIS lados são humanos. Varre seeds/tamanhos
+  // até dois humanos se cruzarem no mata-mata e empatarem.
   function ateUmaDisputa(): RoomState | null {
-    for (let i = 0; i < 200; i++) {
-      const { room } = conduzirDraft(lobby(2, `pen-${i}`), EDITIONS);
-      if (room.disputaPenaltis) return room;
+    for (let n = 2; n <= 5; n++) {
+      for (let i = 0; i < 250; i++) {
+        const { room } = conduzirDraft(lobby(n, `pen-${n}-${i}`), EDITIONS);
+        if (room.disputaPenaltis) return room;
+      }
     }
     return null;
   }
 
-  it('empate no mata-mata pausa o chaveamento e abre a disputa', () => {
+  it('empate humano×humano pausa o chaveamento e abre a disputa', () => {
     const room = ateUmaDisputa();
-    expect(room, 'esperava um empate em 200 seeds').not.toBeNull();
+    expect(room, 'esperava um empate humano×humano').not.toBeNull();
     const d = room!.disputaPenaltis!;
-    // Pausado: ainda sem campeão, e o confronto tem o tempo normal mas sem vencedor.
-    expect(room!.bracket!.championId).toBeNull();
+    expect(room!.players.some((p) => p.id === d.aId)).toBe(true); // os dois são humanos
+    expect(room!.players.some((p) => p.id === d.bId)).toBe(true);
+    expect(room!.bracket!.championId).toBeNull(); // pausado, sem campeão ainda
     const m = room!.bracket!.rounds.flat().find((x) => x.id === d.partidaId)!;
-    expect(m.result).not.toBeNull();
     expect(m.result!.winnerId).toBeNull();
     expect(m.result!.a.goals).toBe(m.result!.b.goals); // empate no tempo normal
   });
@@ -316,15 +326,13 @@ describe('mp disputa de pênaltis (online, interativa)', () => {
     let room = ateUmaDisputa()!;
     const d = room.disputaPenaltis!;
     // Antes de armar (ninguém pronto), escolher canto não faz nada.
-    expect(definirDirecaoPenalti(room, d.aId, 'esquerda', 0)).toBe(room);
-    // Os dois terminam o replay → arma a 1ª cobrança.
+    expect(definirDirecaoPenalti(room, EDITIONS, d.aId, 'esquerda', 0)).toBe(room);
     room = marcarProntoPenalti(room, d.aId, 0);
     room = marcarProntoPenalti(room, d.bId, 0);
     expect(room.disputaPenaltis!.prazo).not.toBeNull();
-    // Conduz as cobranças até encerrar.
     room = resolverDisputasAteOFim(room);
     expect(room.disputaPenaltis).toBeNull();
-    expect(room.players.map((p) => p.id)).toContain(room.bracket!.championId);
+    expect(room.grupos!.classificados).toContain(room.bracket!.championId);
   });
 
   it('timeout auto-resolve a cobrança quando ninguém escolhe', () => {
@@ -333,8 +341,7 @@ describe('mp disputa de pênaltis (online, interativa)', () => {
     room = marcarProntoPenalti(room, d.aId, 0);
     room = marcarProntoPenalti(room, d.bId, 0);
     const golsAntes = room.disputaPenaltis!.historico.length;
-    room = timeoutPenalti(room, 1_000_000); // estourou o prazo, ninguém escolheu
-    // Avançou (uma cobrança a mais no histórico) ou já encerrou a disputa.
+    room = timeoutPenalti(room, EDITIONS, 1_000_000); // estourou o prazo, ninguém escolheu
     const depois = room.disputaPenaltis ? room.disputaPenaltis.historico.length : Infinity;
     expect(depois).toBeGreaterThan(golsAntes);
   });
@@ -369,8 +376,8 @@ describe('mp resilience', () => {
 describe('buildBracket determinism', () => {
   it('is a pure function of room state', () => {
     const room = playFullDraft(lobby(4, 'pure'), EDITIONS).room;
-    const a = buildBracket(room);
-    const b = buildBracket(room);
+    const a = buildBracket(room, EDITIONS);
+    const b = buildBracket(room, EDITIONS);
     expect(a.championId).toBe(b.championId);
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
   });
