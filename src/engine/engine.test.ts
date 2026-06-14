@@ -18,8 +18,10 @@ import {
   isComplete,
   computeTeamStrength,
   simulateCampaign,
+  simulateCampaignInterativa,
   simulateMatch,
   FORMATIONS,
+  type DirecaoPenalti,
   type PlacedPlayer,
   type Formation,
   type RawEdition,
@@ -297,6 +299,51 @@ describe('pênaltis no solo (mata-mata)', () => {
     expect(p.historico.length).toBeGreaterThanOrEqual(2);
     expect(p.golsA).not.toBe(p.golsB);
     expect(p.vencedorLado).toBe(comPen!.win ? 'a' : 'b'); // animação bate com o resultado
+  });
+});
+
+describe('campanha interativa (pênaltis jogáveis no solo)', () => {
+  const placed = buildBestTeam('4-3-3');
+  const strength = computeTeamStrength(placed, '4-3-3');
+  const user: UserTeamInput = { name: 'U', flag: '⭐', style: 'equilibrado', strength, placed };
+
+  /** Acha um seed cuja campanha pause numa disputa de pênaltis (sem escolhas). */
+  function seedComDisputa(prefixo: string): string | null {
+    for (let i = 0; i < 400; i++) {
+      const s = `${prefixo}-${i}`;
+      if (simulateCampaignInterativa(user, EDITIONS, s, []).disputa) return s;
+    }
+    return null;
+  }
+
+  it('pausa numa disputa quando faltam escolhas e é determinística', () => {
+    const seed = seedComDisputa('int');
+    expect(seed, 'esperava um empate no mata-mata em 400 seeds').not.toBeNull();
+    const a = simulateCampaignInterativa(user, EDITIONS, seed!, []);
+    const b = simulateCampaignInterativa(user, EDITIONS, seed!, []);
+    expect(a.disputa).not.toBeNull();
+    expect(a.disputa!.partidaId).toBe(b.disputa!.partidaId);
+    expect(a.campaign.matches.length).toBe(b.campaign.matches.length);
+  });
+
+  it('as escolhas resolvem a disputa, fecham a campanha e são reproduzíveis', () => {
+    const seed = seedComDisputa('int2');
+    expect(seed).not.toBeNull();
+    const escolhas: DirecaoPenalti[] = [];
+    let r = simulateCampaignInterativa(user, EDITIONS, seed!, escolhas);
+    let guard = 0;
+    while (r.disputa && guard++ < 300) {
+      escolhas.push('meio'); // o jogador sempre escolhe o meio
+      r = simulateCampaignInterativa(user, EDITIONS, seed!, escolhas);
+    }
+    expect(r.disputa).toBeNull(); // tudo resolvido
+    // Determinística por (seed + escolhas) → replay/share reproduz idêntico.
+    const r2 = simulateCampaignInterativa(user, EDITIONS, seed!, escolhas);
+    expect(JSON.stringify(r2.campaign)).toBe(JSON.stringify(r.campaign));
+    // A partida que foi à disputa terminou decidida (sem empate).
+    const comPen = r.campaign.matches.find((m) => m.penaltis);
+    expect(comPen).toBeTruthy();
+    expect(comPen!.draw).toBe(false);
   });
 });
 

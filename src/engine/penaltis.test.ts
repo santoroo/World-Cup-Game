@@ -5,6 +5,7 @@ import {
   criarDisputa,
   definirDirecao,
   disputaDecidida,
+  escolhaCpu,
   gerarDisputaAutomatica,
   marcarPronto,
   prontosParaComecar,
@@ -89,6 +90,12 @@ describe('penaltis — modo automático (solo) e prontidão (online)', () => {
     const d = autoCompletarDirecoes(criarDisputa('m', 'a', 'b', 's'));
     expect(d.direcaoChute).not.toBeNull();
     expect(d.direcaoDefesa).not.toBeNull();
+  });
+
+  it('escolhaCpu é determinística por seed/cobrança e varia entre cobranças', () => {
+    expect(escolhaCpu('disp', 1)).toBe(escolhaCpu('disp', 1));
+    const dirs = new Set([1, 2, 3, 4, 5, 6].map((n) => escolhaCpu('disp', n)));
+    expect(dirs.size).toBeGreaterThan(1); // não é sempre o mesmo canto
   });
 
   it('só começa quando os dois envolvidos estão prontos; prazo arma uma vez', () => {

@@ -5,7 +5,15 @@
 // Ratings are never capped at 99 (bonus teams can run up the score).
 // ============================================================================
 
-import { gerarDisputaAutomatica } from './penaltis';
+import {
+  criarDisputa,
+  definirDirecao,
+  escolhaCpu,
+  gerarDisputaAutomatica,
+  resolverChutePendente,
+  type DirecaoPenalti,
+  type DisputaPenaltis,
+} from './penaltis';
 import { createRng, type Rng } from './rng';
 import type {
   CampaignResult,
@@ -254,7 +262,7 @@ export function simulateMatch(
   opp: Opponent,
   stage: string,
   seed: string,
-  opts: { knockout?: boolean } = {},
+  opts: { knockout?: boolean; interativo?: boolean } = {},
 ): MatchResult {
   const rng = createRng(seed);
 
@@ -271,8 +279,10 @@ export function simulateMatch(
   let penaltisSeq: MatchResult['penaltis'] = null;
 
   // Mata-mata não pode terminar empatado: vai pra disputa de pênaltis automática,
-  // inclinada (sem garantir) pelo overall — o time melhor converte mais.
-  if (draw && opts.knockout) {
+  // inclinada (sem garantir) pelo overall — o time melhor converte mais. No modo
+  // `interativo` (solo jogável) deixamos o empate em aberto: quem resolve é o
+  // jogador, fora daqui.
+  if (draw && opts.knockout && !opts.interativo) {
     const favorA = Math.max(-0.25, Math.min(0.25, (teamOverall(user.strength) - teamOverall(opp)) / 160));
     const disputa = gerarDisputaAutomatica('campanha', 'home', 'away', `${seed}#pen`, favorA);
     const userWon = disputa.vencedorId === 'home';
@@ -449,65 +459,148 @@ export function simulatePvpMatch(a: PvpTeam, b: PvpTeam, seed: string): PvpResul
   };
 }
 
+// ----------------------------------------------------------------------------
+// Campanha — lógica de classificação/eliminação num lugar só, compartilhada
+// pela versão automática (testes/balanço) e pela interativa (solo jogável).
+// ----------------------------------------------------------------------------
+
+interface EstadoCampanha {
+  matches: MatchResult[];
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  champion: boolean;
+  eliminatedAt: string | null;
+  hadSeteAZero: boolean;
+  /** true = campanha terminou cedo (eliminado). */
+  encerrada: boolean;
+}
+
+function novoEstadoCampanha(): EstadoCampanha {
+  return { matches: [], wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, champion: false, eliminatedAt: null, hadSeteAZero: false, encerrada: false };
+}
+
+/** Aplica uma partida (já finalizada) ao estado da campanha. */
+function aplicarPartida(e: EstadoCampanha, i: number, m: MatchResult): void {
+  e.matches.push(m);
+  e.goalsFor += m.homeGoals;
+  e.goalsAgainst += m.awayGoals;
+  if (m.win) e.wins++;
+  else if (m.draw) e.draws++;
+  else e.losses++;
+  if (m.homeGoals >= 7 && m.awayGoals === 0) e.hadSeteAZero = true;
+
+  const knockout = i >= 3;
+  if (i === 2) {
+    // Fim da fase de grupos: precisa de >= 4 pontos pra avançar.
+    if (e.wins * 3 + e.draws < 4) {
+      e.eliminatedAt = 'Fase de grupos';
+      e.encerrada = true;
+    }
+  } else if (knockout && !m.win) {
+    e.eliminatedAt = CAMPAIGN_STAGES[i];
+    e.encerrada = true;
+  } else if (CAMPAIGN_STAGES[i] === 'Final' && m.win) {
+    e.champion = true;
+  }
+}
+
+/** Monta o CampaignResult final. `extras` (partida pendente) entram só pra exibição. */
+function montarCampaign(e: EstadoCampanha, extras: MatchResult[] = []): CampaignResult {
+  const decisive = e.matches.filter((m) => m.win);
+  const biggestWin =
+    decisive.length > 0
+      ? decisive.reduce((best, m) => (m.homeGoals - m.awayGoals > best.homeGoals - best.awayGoals ? m : best))
+      : null;
+  return {
+    matches: extras.length ? [...e.matches, ...extras] : e.matches,
+    champion: e.champion,
+    eliminatedAt: e.eliminatedAt,
+    wins: e.wins,
+    draws: e.draws,
+    losses: e.losses,
+    goalsFor: e.goalsFor,
+    goalsAgainst: e.goalsAgainst,
+    biggestWin,
+    hadSeteAZero: e.hadSeteAZero,
+  };
+}
+
 export function simulateCampaign(user: UserTeamInput, editions: Edition[], seed: string): CampaignResult {
   const opponents = pickOpponents(editions, seed);
-  const matches: MatchResult[] = [];
+  const estado = novoEstadoCampanha();
+  for (let i = 0; i < CAMPAIGN_STAGES.length; i++) {
+    const knockout = i >= 3;
+    const m = simulateMatch(user, opponents[i], CAMPAIGN_STAGES[i], `${seed}#match#${i}`, { knockout });
+    aplicarPartida(estado, i, m);
+    if (estado.encerrada) break;
+  }
+  return montarCampaign(estado);
+}
 
-  let wins = 0;
-  let draws = 0;
-  let losses = 0;
-  let goalsFor = 0;
-  let goalsAgainst = 0;
-  let champion = false;
-  let eliminatedAt: string | null = null;
-  let hadSeteAZero = false;
+export interface CampanhaInterativa {
+  campaign: CampaignResult;
+  /** Disputa de pênaltis aguardando a próxima escolha do usuário. null = campanha resolvida. */
+  disputa: DisputaPenaltis | null;
+}
+
+/**
+ * Campanha do solo onde os pênaltis são jogados pelo usuário. As partidas têm o
+ * regulamento determinístico por seed; num empate de mata-mata, a disputa é
+ * resolvida cobrança a cobrança consumindo as direções escolhidas pelo usuário
+ * (`escolhas`, o lado `home`) — a CPU sorteia o outro lado (`escolhaCpu`). Se as
+ * escolhas acabarem no meio da disputa, retorna `disputa` != null pra UI seguir.
+ * Determinística por (seed + escolhas) → o replay/compartilhamento reproduz igual.
+ */
+export function simulateCampaignInterativa(
+  user: UserTeamInput,
+  editions: Edition[],
+  seed: string,
+  escolhas: DirecaoPenalti[],
+): CampanhaInterativa {
+  const opponents = pickOpponents(editions, seed);
+  const estado = novoEstadoCampanha();
+  let cursor = 0;
 
   for (let i = 0; i < CAMPAIGN_STAGES.length; i++) {
     const stage = CAMPAIGN_STAGES[i];
     const knockout = i >= 3;
-    const m = simulateMatch(user, opponents[i], stage, `${seed}#match#${i}`, { knockout });
-    matches.push(m);
+    const reg = simulateMatch(user, opponents[i], stage, `${seed}#match#${i}`, { knockout, interativo: true });
 
-    goalsFor += m.homeGoals;
-    goalsAgainst += m.awayGoals;
-    if (m.win) wins++;
-    else if (m.draw) draws++;
-    else losses++;
-    if (m.homeGoals >= 7 && m.awayGoals === 0) hadSeteAZero = true;
-
-    if (i === 2) {
-      // End of group stage: need >= 4 points to advance.
-      const points = wins * 3 + draws;
-      if (points < 4) {
-        eliminatedAt = 'Fase de grupos';
-        break;
+    if (knockout && reg.draw) {
+      const disputaSeed = `${seed}#pen#match#${i}`;
+      let d = criarDisputa(stage, 'home', 'away', disputaSeed);
+      while (!d.encerrada) {
+        if (cursor >= escolhas.length) {
+          // Sem mais escolhas: pausa. A partida (empate) entra só pra exibição.
+          return { campaign: montarCampaign(estado, [reg]), disputa: d };
+        }
+        const escolha = escolhas[cursor++];
+        const cpu = escolhaCpu(disputaSeed, d.numeroChute);
+        if (d.vez === 'a') {
+          d = definirDirecao(d, 'chute', escolha); // usuário cobra
+          d = definirDirecao(d, 'defesa', cpu); // CPU defende
+        } else {
+          d = definirDirecao(d, 'chute', cpu); // CPU cobra
+          d = definirDirecao(d, 'defesa', escolha); // usuário defende
+        }
+        d = resolverChutePendente(d, 0, 0);
       }
-    } else if (knockout && !m.win) {
-      eliminatedAt = stage;
-      break;
-    } else if (stage === 'Final' && m.win) {
-      champion = true;
+      const userWon = d.vencedorId === 'home';
+      aplicarPartida(estado, i, {
+        ...reg,
+        win: userWon,
+        draw: false,
+        penaltis: { golsA: d.golsA, golsB: d.golsB, historico: d.historico, vencedorLado: userWon ? 'a' : 'b' },
+        blurb: `${reg.blurb} ${userWon ? 'Vitória nos pênaltis!' : 'Eliminado nos pênaltis.'}`,
+      });
+    } else {
+      aplicarPartida(estado, i, reg);
     }
+    if (estado.encerrada) break;
   }
 
-  const decisive = matches.filter((m) => m.win);
-  const biggestWin =
-    decisive.length > 0
-      ? decisive.reduce((best, m) =>
-          m.homeGoals - m.awayGoals > best.homeGoals - best.awayGoals ? m : best,
-        )
-      : null;
-
-  return {
-    matches,
-    champion,
-    eliminatedAt,
-    wins,
-    draws,
-    losses,
-    goalsFor,
-    goalsAgainst,
-    biggestWin,
-    hadSeteAZero,
-  };
+  return { campaign: montarCampaign(estado), disputa: null };
 }

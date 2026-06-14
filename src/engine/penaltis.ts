@@ -202,6 +202,15 @@ export function armarPrazo(disputa: DisputaPenaltis, agora: number, msPorChute: 
 }
 
 /**
+ * Direção determinística do adversário (CPU) numa cobrança — usada no solo
+ * interativo: o usuário escolhe seu canto, a máquina sorteia o do outro time.
+ * Stream próprio (`#cpu`) pra não colidir com a resolução (`#pen`).
+ */
+export function escolhaCpu(disputaSeed: string, numeroChute: number): DirecaoPenalti {
+  return createRng(`${disputaSeed}#cpu#${numeroChute}`).pick(DIRECOES_PENALTI);
+}
+
+/**
  * Roda a disputa inteira automaticamente (direções sorteadas) — usada no solo e
  * em testes. Determinística por seed. `favorA` (~[-0.33, 0.33]) inclina o
  * resultado pro lado A (time mais forte): o goleiro adversário "acerta o canto"
