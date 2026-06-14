@@ -208,12 +208,16 @@ function assignScorers(placed: PlacedPlayer[], count: number, rng: Rng): Scorer[
 // seed replays with the exact same scoreline, and the balance tests stay valid.
 // ----------------------------------------------------------------------------
 
-/** Roll 0–2 sending-offs for one side. `nameFor` labels the player shown. */
+/**
+ * Roll 0–2 sending-offs for one side. `nameFor` labels the player shown.
+ * Mantido raro de propósito: vermelho é um evento marcante, não pra todo jogo.
+ * ~6% por lado (≈11% por partida) + um segundo bem improvável.
+ */
 function redCardsFor(nameFor: (rng: Rng) => string, rng: Rng): RedCard[] {
   const cards: RedCard[] = [];
-  if (rng.chance(0.14)) {
+  if (rng.chance(0.06)) {
     cards.push({ name: nameFor(rng), minute: rng.int(25, 90) });
-    if (rng.chance(0.12)) cards.push({ name: nameFor(rng), minute: rng.int(25, 90) });
+    if (rng.chance(0.08)) cards.push({ name: nameFor(rng), minute: rng.int(25, 90) });
   }
   return cards.sort((a, b) => a.minute - b.minute);
 }
