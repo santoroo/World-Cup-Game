@@ -106,9 +106,14 @@ súbita). Render compartilhado em `components/DisputaPenaltis.tsx` (animação).
   `timeoutPenalti` sorteia a direção de quem não escolheu. Mensagens
   `prontoPenalti`/`penalti`. **As escolhas humanas são a única entrada fora do
   seed** — aceitável porque o online não tem replay por seed.
-- **Solo (automático):** `gerarDisputaAutomatica` (determinística por seed, viés
-  leve pelo overall via `favorA`) anexa a sequência ao `MatchResult.penaltis`; o
-  `LiveMatch` toca a animação após o 0'→90'.
+- **Solo (interativo):** `simulateCampaignInterativa` dirige a campanha — pausa no
+  empate de mata-mata e resolve cobrança a cobrança consumindo os cantos que o
+  usuário escolhe (lado `home`); a CPU sorteia o outro lado (`escolhaCpu`). O
+  `useGameStore` acumula `escolhasPenaltis` e a `SimulationScreen` toca o 0'→90'
+  e depois a disputa interativa (como o `MpBracket`). Determinístico por
+  (seed + escolhas) → o `share.ts` (payload v2) guarda os cantos e reproduz igual.
+  A `simulateCampaign` **automática** (com `gerarDisputaAutomatica`) fica só pros
+  testes/balanço.
 - `MpDraft` tem **paridade com o solo**: escolhe a vaga no `pick(cardId, slotId)` e
   reposiciona/troca (`mover`/`trocar`) durante o draft.
 

@@ -20,7 +20,7 @@ monte seus **11 titulares** e encare a campanha. O troféu máximo? O lendário 
 - 🧪 **Engine pura e determinística por _seed_**, isolada da UI e coberta por testes — mesmo resultado para o mesmo jogo (links de replay reproduzíveis).
 - ⚖️ **Matchmaking justo**: o melhor time é favorito, **nunca garantido** — viradas acontecem.
 - 🌐 **Multiplayer online** (2 a 5 jogadores), pela internet, sem LAN: draft alternado ao vivo e mata-mata até a final.
-- 🥅 **Pênaltis interativos no online:** empate no mata-mata vira disputa onde **você escolhe o canto** (e, no gol, pra onde pular), com timer de 10s e animação. No solo, a disputa é animada automaticamente.
+- 🥅 **Pênaltis interativos:** empate no mata-mata vira disputa animada onde **você escolhe o canto** pra chutar e pra defender. No online cada lado é um jogador (timer de 10s); no solo você decide os dois lados do seu time e a máquina sorteia o adversário.
 - 📱 **Responsivo** desktop + celular, com cara de transmissão de futebol.
 
 ---
@@ -79,7 +79,7 @@ O `cloudflared` imprime uma URL pública (tipo `https://algo.trycloudflare.com`)
 - **Compatibilidade de posição:** encaixes sensatos têm penalidade pequena/média (ponta↔centroavante, volante↔meia, zagueiro↔lateral); o resto é proibido. Jogador de linha no gol e goleiro na linha: bloqueados (salvo o coringa `ALL`).
 - **Química:** sobe com mesmo país, mesma década, todos na posição e formação coerente; cai com gente fora de posição.
 - **Matchmaking (sorte × estratégia):** modelo de _expected goals_ com um fator de **forma/sorte por jogo**. Times parelhos viram cara-ou-coroa; um azarão inspirado bate um favorito de vez em quando; uma vantagem enorme ainda pode escorregar num dia ruim. Tudo determinístico por _seed_.
-- **Pênaltis no mata-mata:** empate vai pra disputa (melhor de 5 + morte súbita). No **online** é **interativa** — cobrador e goleiro escolhem o canto (esquerda/meio/direita) num timer de 10s; acertou o mesmo canto, defesa; canto diferente, quase sempre gol. No **solo**, é animada automaticamente (determinística por _seed_, levemente puxada pelo overall). As escolhas humanas são a única entrada fora do _seed_ — e só no online, que não tem replay por _seed_.
+- **Pênaltis no mata-mata:** empate vai pra disputa **interativa e animada** (melhor de 5 + morte súbita) — você escolhe o canto pra chutar e pra defender; mesmo canto, defesa; canto diferente, quase sempre gol. No **online** cada lado é um jogador (timer de 10s); no **solo** você decide os dois lados do seu time e a máquina (`escolhaCpu`) sorteia o adversário. O solo é determinístico por (_seed_ + suas escolhas), então o link de replay guarda os cantos e reproduz a disputa igualzinha.
 
 ---
 
