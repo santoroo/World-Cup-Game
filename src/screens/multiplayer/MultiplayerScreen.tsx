@@ -2,7 +2,7 @@ import { MultiplayerProvider, useMultiplayer } from '../../game/useMultiplayer';
 import { MpJoin } from './MpJoin';
 import { MpLobby } from './MpLobby';
 import { MpDraft } from './MpDraft';
-import { MpBracket } from './MpBracket';
+import { MpTorneio } from './MpTorneio';
 
 function StatusBar() {
   const { status, error, clearError } = useMultiplayer();
@@ -40,7 +40,7 @@ function Inner({ onExit }: { onExit: () => void }) {
       {!room && <MpJoin onBack={onExit} />}
       {room?.phase === 'lobby' && <MpLobby onExit={exit} />}
       {room?.phase === 'draft' && <MpDraft onExit={exit} />}
-      {room?.phase === 'bracket' && <MpBracket onExit={exit} />}
+      {room?.phase === 'bracket' && <MpTorneio onExit={exit} />}
     </div>
   );
 }

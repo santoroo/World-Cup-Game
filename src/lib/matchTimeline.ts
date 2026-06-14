@@ -4,7 +4,8 @@
 // Pure (no React): types, tempo constants, persistence and the two builders.
 // ============================================================================
 
-import type { BracketMatch, MatchResult, MpPlayer } from '../engine';
+import type { BracketMatch, JogoGrupo, MatchResult, MpPlayer } from '../engine';
+import { rotuloCompetidor } from './competidores';
 
 export type SimSpeed = 'lento' | 'normal' | 'rapido';
 
@@ -111,17 +112,17 @@ export function liveFromMatch(match: MatchResult, teamName: string, index: numbe
   };
 }
 
-/** Build live data for a played bracket (PvP) tie. Returns null for byes. */
-export function liveFromBracket(match: BracketMatch, byId: Map<string, MpPlayer>): LiveMatchData | null {
+/** Build live data for a played bracket (PvP) tie. Returns null for byes. Resolve humano OU CPU. */
+export function liveFromBracket(match: BracketMatch, jogadores: MpPlayer[]): LiveMatchData | null {
   const res = match.result;
   if (!res || !match.aId || !match.bId) return null;
-  const a = byId.get(match.aId);
-  const b = byId.get(match.bId);
+  const a = rotuloCompetidor(match.aId, jogadores);
+  const b = rotuloCompetidor(match.bId, jogadores);
   return {
     key: match.id,
     stageLabel: match.stageLabel,
-    home: { name: a?.name ?? '?', icon: a?.avatar ?? '⚽', goals: res.a.goals },
-    away: { name: b?.name ?? '?', icon: b?.avatar ?? '⚽', goals: res.b.goals },
+    home: { name: a.nome, icon: a.icon, goals: res.a.goals },
+    away: { name: b.nome, icon: b.icon, goals: res.b.goals },
     events: buildEvents(
       { goals: res.a.scorers, reds: res.a.redCards },
       { goals: res.b.scorers, reds: res.b.redCards },
@@ -129,5 +130,25 @@ export function liveFromBracket(match: BracketMatch, byId: Map<string, MpPlayer>
     blurb: res.blurb,
     penalties: res.penalties,
     winner: res.a.goals === res.b.goals ? 'draw' : res.winnerId === match.aId ? 'home' : 'away',
+  };
+}
+
+/** Build live data for a group match (fase de grupos). */
+export function liveFromJogoGrupo(jogo: JogoGrupo, jogadores: MpPlayer[], stageLabel: string, key: string): LiveMatchData {
+  const a = rotuloCompetidor(jogo.aId, jogadores);
+  const b = rotuloCompetidor(jogo.bId, jogadores);
+  const blurb = jogo.golsA === jogo.golsB ? 'Empate na fase de grupos.' : jogo.golsA > jogo.golsB ? 'Três pontos importantes!' : 'Tropeço nos grupos.';
+  return {
+    key,
+    stageLabel,
+    home: { name: a.nome, icon: a.icon, goals: jogo.golsA },
+    away: { name: b.nome, icon: b.icon, goals: jogo.golsB },
+    events: buildEvents(
+      { goals: jogo.scorersA, reds: jogo.redCardsA },
+      { goals: jogo.scorersB, reds: jogo.redCardsB },
+    ),
+    blurb,
+    penalties: false,
+    winner: jogo.golsA > jogo.golsB ? 'home' : jogo.golsB > jogo.golsA ? 'away' : 'draw',
   };
 }

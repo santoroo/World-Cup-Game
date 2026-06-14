@@ -586,7 +586,8 @@ export interface FaseGrupos {
 const TAM_GRUPO = 4;
 const NOMES_GRUPO = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
-function calcularTabela(competidores: string[], jogos: JogoGrupo[]): LinhaTabela[] {
+/** Classificação de um grupo a partir dos jogos (parcial ou completa). */
+export function calcularTabela(competidores: string[], jogos: JogoGrupo[]): LinhaTabela[] {
   const tab = new Map<string, LinhaTabela>(
     competidores.map((id) => [id, { competidorId: id, pts: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, sg: 0 }]),
   );
