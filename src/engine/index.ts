@@ -11,6 +11,7 @@ export * from './compatibility';
 export * from './data';
 export * from './draft';
 export * from './chemistry';
+export * from './penaltis';
 export * from './simulation';
 export * from './scoring';
 export * from './multiplayer';
