@@ -13,3 +13,4 @@ export * from './draft';
 export * from './chemistry';
 export * from './simulation';
 export * from './scoring';
+export * from './multiplayer';

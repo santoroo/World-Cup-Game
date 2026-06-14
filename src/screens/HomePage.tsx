@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '../components/Button';
 import { useGame } from '../game/useGameStore';
 
-export function HomePage() {
+export function HomePage({ onPlayOnline }: { onPlayOnline: () => void }) {
   const { goToSetup } = useGame();
   const [showHow, setShowHow] = useState(false);
 
@@ -21,10 +21,16 @@ export function HomePage() {
         <Button variant="gold" className="px-8 py-4 text-lg" onClick={goToSetup}>
           ⚽ Jogar agora
         </Button>
+        <Button variant="primary" className="px-8 py-4 text-lg" onClick={onPlayOnline}>
+          🌐 Jogar online
+        </Button>
         <Button variant="secondary" onClick={() => setShowHow((v) => !v)}>
           Como funciona
         </Button>
       </div>
+      <p className="mt-2 text-xs text-white/40">
+        Online: até 5 amigos, draft alternado e mata-mata até a final.
+      </p>
 
       {showHow && (
         <div className="mt-6 w-full animate-card-in rounded-2xl border border-white/10 bg-black/30 p-5 text-left text-sm text-white/80">

@@ -18,10 +18,14 @@ import {
   isComplete,
   computeTeamStrength,
   simulateCampaign,
+  simulateMatch,
   FORMATIONS,
   type PlacedPlayer,
   type Formation,
   type RawEdition,
+  type Opponent,
+  type TeamStrength,
+  type UserTeamInput,
 } from './index';
 
 const EDITIONS = loadEditions((editionsRaw as { editions: RawEdition[] }).editions);
@@ -181,6 +185,50 @@ describe('reposition (move / swap)', () => {
     const swapped = swapPlayers(s, 'CB1', 'CB2');
     expect(swapped.placed.find((p) => p.slotId === 'CB1')?.player.id).toBe(cbs[1].id);
     expect(swapped.placed.find((p) => p.slotId === 'CB2')?.player.id).toBe(cbs[0].id);
+  });
+});
+
+describe('matchmaking variance (upsets)', () => {
+  const team = (ovr: number, chem = 78): TeamStrength => ({
+    attack: ovr, midfield: ovr, defense: ovr, goalkeeper: ovr, chemistry: chem,
+    overall: ovr, strengths: [], weaknesses: [],
+  });
+  const oppOf = (ovr: number, chem = 78): Opponent => ({
+    id: 'o', name: 'Rival', flag: '⚽', strength: ovr,
+    attack: ovr, midfield: ovr, defense: ovr, goalkeeper: ovr, chemistry: chem,
+  });
+  const userOf = (ovr: number): UserTeamInput => ({
+    name: 'U', flag: '⭐', style: 'equilibrado', strength: team(ovr), placed: [],
+  });
+
+  function tally(a: number, b: number, runs: number) {
+    let win = 0, draw = 0, loss = 0;
+    for (let i = 0; i < runs; i++) {
+      const m = simulateMatch(userOf(a), oppOf(b), 'Amistoso', `var-${a}-${b}-${i}`);
+      if (m.win) win++; else if (m.draw) draw++; else loss++;
+    }
+    return { win: win / runs, draw: draw / runs, loss: loss / runs };
+  }
+
+  it('keeps evenly matched sides a true coin flip', () => {
+    const r = tally(85, 85, 2500);
+    // Neither side should dominate; both win a healthy share.
+    expect(r.win).toBeGreaterThan(0.28);
+    expect(r.loss).toBeGreaterThan(0.28);
+    expect(Math.abs(r.win - r.loss)).toBeLessThan(0.08);
+  });
+
+  it('favours the better team without guaranteeing it (upsets stay possible)', () => {
+    const r = tally(95, 85, 2500); // a clear 10-point edge
+    expect(r.win).toBeGreaterThan(0.6); // clearly favoured…
+    expect(r.win).toBeLessThan(0.85); // …but far from certain
+    expect(r.loss).toBeGreaterThan(0.04); // the underdog still wins sometimes
+  });
+
+  it('lets a big favourite still drop a match now and then', () => {
+    const r = tally(95, 80, 3000); // a heavy 15-point favourite
+    expect(r.win).toBeLessThan(0.95); // not a sure thing
+    expect(r.win + r.draw).toBeLessThan(0.985); // genuine losses happen
   });
 });
 

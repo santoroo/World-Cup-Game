@@ -103,19 +103,88 @@ function expectedGoals(off: number, def: number): number {
   return Math.max(0.08, Math.min(9, XG_BASE * Math.exp((off - def) / XG_SCALE)));
 }
 
-/** Pull chemistry toward consistency: high chem teams swing less. */
+// Per-match "form" (luck): each side draws a swing added to its offence and
+// subtracted from its defence — a good day means you both score more and concede
+// less, a bad day the opposite. This is what keeps football honest: the better
+// team is favoured but never guaranteed, and an underdog on a great day (vs a
+// favourite on an off day) can pull the upset. Drawn from the seeded RNG, so a
+// given seed always replays identically (share links stay reproducible).
+const FORM_SWING = 7;
+function drawForm(rng: Rng): number {
+  return rng.range(-FORM_SWING, FORM_SWING);
+}
+
+/** Pull chemistry toward consistency: high chem teams swing a touch less. */
 function applyConsistency(goals: number, lambda: number, chemistry: number): number {
-  const pull = 0.28 * (chemistry / 100);
+  const pull = 0.14 * (chemistry / 100);
   return Math.round(goals * (1 - pull) + lambda * pull);
+}
+
+/** A side as seen by the scoreline resolver. */
+export interface SideRatings {
+  off: number;
+  def: number;
+  chemistry: number;
+  /** Style knobs: own attacking output and own defensive leakiness. */
+  attackStyle: number;
+  concedeStyle: number;
+}
+
+/** Map an offensive/defensive team into resolver indices. */
+export function sideFromRatings(
+  s: { attack: number; midfield: number; defense: number; goalkeeper: number; chemistry: number },
+  style: PlayStyle = 'equilibrado',
+): SideRatings {
+  return {
+    off: offensiveIndex(s),
+    def: defensiveIndex(s),
+    chemistry: s.chemistry,
+    attackStyle: STYLE[style].atk,
+    concedeStyle: STYLE[style].concede,
+  };
+}
+
+/**
+ * Resolve one scoreline. Goals a side scores depend on its own attack vs the
+ * other's defence, its own attacking style and the *opponent's* defensive
+ * leakiness. Each side also draws a per-match "form": a good day lifts its
+ * attack and tightens its defence (and vice-versa), so luck swings the whole
+ * match — the better team is favoured but never guaranteed. Shared by the
+ * campaign (PvE) and the multiplayer bracket (PvP).
+ */
+export function resolveScoreline(a: SideRatings, b: SideRatings, rng: Rng): { goalsA: number; goalsB: number } {
+  const formA = drawForm(rng);
+  const formB = drawForm(rng);
+
+  const lambdaA = expectedGoals(a.off + formA, b.def + formB) * a.attackStyle * b.concedeStyle;
+  const lambdaB = expectedGoals(b.off + formB, a.def + formA) * b.attackStyle * a.concedeStyle;
+
+  let goalsA = applyConsistency(poisson(lambdaA, rng), lambdaA, a.chemistry);
+  let goalsB = applyConsistency(poisson(lambdaB, rng), lambdaB, b.chemistry);
+  goalsA = Math.max(0, Math.min(9, goalsA));
+  goalsB = Math.max(0, Math.min(9, goalsB));
+  return { goalsA, goalsB };
+}
+
+/**
+ * Goal-scoring weight for a placed player. Steeply favours attackers and
+ * attacking midfielders; defenders chip in rarely and keepers essentially never
+ * (no more goalkeepers topping the scoresheet). A small clutch term lets the big
+ * names show up in the big moments.
+ */
+function scorerWeight(p: PlacedPlayer): number {
+  // attack ~40 (defenders) → ~0; ~85 (strikers) → large. GKs (~12) → 0.
+  const base = Math.pow(Math.max(0, p.player.attack - 42), 1.7);
+  const clutch = Math.max(0, p.player.clutch - 60) * 0.4;
+  return base + clutch;
 }
 
 function assignScorers(placed: PlacedPlayer[], count: number, rng: Rng): Scorer[] {
   if (count <= 0) return [];
-  // Weight by attacking output + clutch; attackers score most.
-  const pool = placed.map((p) => ({
-    name: p.player.name,
-    weight: Math.max(1, p.player.attack * 0.7 + p.player.clutch * 0.3),
-  }));
+  let pool = placed.map((p) => ({ name: p.player.name, weight: scorerWeight(p) }));
+  // Safety net: if nobody has meaningful attacking output, fall back to uniform
+  // so a goal is never silently miscredited to the last player in the list.
+  if (pool.every((p) => p.weight <= 0)) pool = pool.map((p) => ({ ...p, weight: 1 }));
   const scorers: Scorer[] = [];
   const minutes = new Set<number>();
   for (let i = 0; i < count; i++) {
@@ -163,20 +232,13 @@ export function simulateMatch(
   opts: { knockout?: boolean } = {},
 ): MatchResult {
   const rng = createRng(seed);
-  const style = STYLE[user.style];
 
-  const offA = offensiveIndex(user.strength);
-  const defA = defensiveIndex(user.strength);
-  const offB = offensiveIndex(opp);
-  const defB = defensiveIndex(opp);
-
-  const lambdaA = expectedGoals(offA, defB) * style.atk;
-  const lambdaB = expectedGoals(offB, defA) * style.concede;
-
-  let homeGoals = applyConsistency(poisson(lambdaA, rng), lambdaA, user.strength.chemistry);
-  let awayGoals = applyConsistency(poisson(lambdaB, rng), lambdaB, opp.chemistry);
-  homeGoals = Math.max(0, Math.min(9, homeGoals));
-  awayGoals = Math.max(0, Math.min(9, awayGoals));
+  // The user carries their chosen style; generated opponents play it straight.
+  const { goalsA: homeGoals, goalsB: awayGoals } = resolveScoreline(
+    sideFromRatings(user.strength, user.style),
+    sideFromRatings(opp, 'equilibrado'),
+    rng,
+  );
 
   let win = homeGoals > awayGoals;
   let draw = homeGoals === awayGoals;
@@ -244,6 +306,76 @@ export function pickOpponents(editions: Edition[], seed: string): Opponent[] {
     opponents.push(opponentFromEdition(pick, rng, stageBoost));
   }
   return opponents;
+}
+
+// ----------------------------------------------------------------------------
+// Player-vs-player (multiplayer bracket). Two real user teams face off using the
+// exact same xG + form model as the campaign, so the matchmaking philosophy is
+// identical: the better side is favoured, never guaranteed. Knockouts can't end
+// level — they go to penalties weighted (gently) by overall.
+// ----------------------------------------------------------------------------
+
+export interface PvpTeam {
+  id: string;
+  name: string;
+  style: PlayStyle;
+  strength: TeamStrength;
+  placed: PlacedPlayer[];
+}
+
+export interface PvpResult {
+  goalsA: number;
+  goalsB: number;
+  scorersA: Scorer[];
+  scorersB: Scorer[];
+  winnerId: string;
+  penalties: boolean;
+  blurb: string;
+}
+
+function pvpBlurb(goalsA: number, goalsB: number, penalties: boolean): string {
+  if (penalties) return `Empate em ${goalsA} a ${goalsB}. Decisão nos pênaltis!`;
+  const hi = Math.max(goalsA, goalsB);
+  const lo = Math.min(goalsA, goalsB);
+  const diff = hi - lo;
+  if (hi >= 7 && lo === 0) return 'Humilhação pra história. 7 a 0 é lenda!';
+  if (diff >= 5) return 'Goleada sem dó nenhuma.';
+  if (diff >= 3) return 'Passeio dentro de campo.';
+  if (diff === 2) return 'Vitória segura e merecida.';
+  return 'Decidido no detalhe, jogão equilibrado.';
+}
+
+/**
+ * Simulate a single knockout tie between two user teams. Deterministic by seed.
+ * Always returns a winner (penalties break a draw).
+ */
+export function simulatePvpMatch(a: PvpTeam, b: PvpTeam, seed: string): PvpResult {
+  const rng = createRng(seed);
+  const { goalsA, goalsB } = resolveScoreline(
+    sideFromRatings(a.strength, a.style),
+    sideFromRatings(b.strength, b.style),
+    rng,
+  );
+
+  let winnerId: string;
+  let penalties = false;
+  if (goalsA > goalsB) winnerId = a.id;
+  else if (goalsB > goalsA) winnerId = b.id;
+  else {
+    const prob = Math.max(0.15, Math.min(0.85, 0.5 + (teamOverall(a.strength) - teamOverall(b.strength)) / 120));
+    winnerId = rng.chance(prob) ? a.id : b.id;
+    penalties = true;
+  }
+
+  return {
+    goalsA,
+    goalsB,
+    scorersA: assignScorers(a.placed, goalsA, rng),
+    scorersB: assignScorers(b.placed, goalsB, rng),
+    winnerId,
+    penalties,
+    blurb: pvpBlurb(goalsA, goalsB, penalties),
+  };
 }
 
 export function simulateCampaign(user: UserTeamInput, editions: Edition[], seed: string): CampaignResult {
