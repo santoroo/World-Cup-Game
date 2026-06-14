@@ -50,8 +50,11 @@ export function MpBracket({ onExit }: { onExit: () => void }) {
     if (disputaAtiva) {
       const idx = flatIndexOf(rounds, disputaAtiva.partidaId);
       if (idx >= 0) {
-        setPlayed(idx);
-        setReplayConcluido(true);
+        // Já no confronto da disputa: pula o 0'→90' direto pros pênaltis. Senão,
+        // adianta os confrontos já decididos até chegar nele (o reset por `played`
+        // cuida de tocar o 0'→90' dele).
+        if (idx === played) setReplayConcluido(true);
+        else setPlayed(idx);
         return;
       }
     }

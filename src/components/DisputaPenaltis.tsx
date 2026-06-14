@@ -48,7 +48,8 @@ export function DisputaPenaltis({
   const [mostrados, setMostrados] = useState(0);
   const [faseAnim, setFaseAnim] = useState<'voo' | 'resultado'>('voo');
   const [agora, setAgora] = useState(() => Date.now());
-  const concluiuRef = useRef(false);
+  const onConcluidoRef = useRef(onConcluido);
+  onConcluidoRef.current = onConcluido;
 
   // Anima a próxima cobrança ainda não mostrada.
   useEffect(() => {
@@ -74,13 +75,14 @@ export function DisputaPenaltis({
   const alcancou = !animando; // já mostrou tudo que existe
 
   // Conclui (avança o cursor) quando a disputa acabou e tudo foi animado.
+  // onConcluido via ref (fora das deps) pra um re-render do pai não cancelar o
+  // timer; deps estáveis (alcancou/encerrada só viram true uma vez) o tornam
+  // resiliente ao StrictMode — o último timer agendado sobrevive e dispara.
   useEffect(() => {
-    if (alcancou && dados.encerrada && !concluiuRef.current) {
-      concluiuRef.current = true;
-      const id = setTimeout(() => onConcluido?.(), 1400);
-      return () => clearTimeout(id);
-    }
-  }, [alcancou, dados.encerrada, onConcluido]);
+    if (!alcancou || !dados.encerrada) return;
+    const id = setTimeout(() => onConcluidoRef.current?.(), 1400);
+    return () => clearTimeout(id);
+  }, [alcancou, dados.encerrada]);
 
   const placarA = historico.slice(0, mostrados).filter((c) => c.lado === 'a' && c.marcou).length;
   const placarB = historico.slice(0, mostrados).filter((c) => c.lado === 'b' && c.marcou).length;
