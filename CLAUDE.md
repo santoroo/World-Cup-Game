@@ -2,7 +2,8 @@
 
 Guidance for working in this repo. **Copa dos Sonhos** is a football "dream team"
 draft game: roll a die to draw a real World-Cup squad, pick one player per round,
-build your XI, then simulate a campaign (solo) or a live knockout (online).
+build your XI, then simulate a campaign (solo) or a live World Cup —
+**group stage + knockout** (online).
 
 `React 18` · `TypeScript` · `Vite` · `Tailwind` · `ws` (WebSocket) · pure,
 seed-deterministic engine.
@@ -38,7 +39,7 @@ src/
 │  ├─ draft.ts        roll/pick/place/move/swap, skip limit (MAX_FREE_SKIPS)
 │  ├─ simulation.ts   xG + "form" model; simularPvpTempoNormal / simulateMatch / simulateCampaign
 │  ├─ penaltis.ts     disputa de pênaltis (pura): canto-do-chute × canto-da-defesa + sorte; interativa (online) ou gerarDisputaAutomatica (solo)
-│  └─ multiplayer.ts  room reducers: lobby → snake draft → knockout bracket (resolvido em ordem; pausa no empate p/ a disputa interativa)
+│  └─ multiplayer.ts  room reducers: lobby → snake draft → fase de grupos (1 humano + 3 CPU/grupo) → mata-mata dos classificados (pausa no empate humano×humano p/ a disputa interativa)
 ├─ data/editions.json ~28 real squads + the secret "Colégio Módulo" (isBonus)
 ├─ game/           # thin React stores over the engine
 │  ├─ useGameStore.tsx   solo flow (phases: home→setup→draft→simulating→final)
@@ -92,6 +93,18 @@ Rápido** (`lib/matchTimeline.ts`, persisted to localStorage via `useSimSpeed`).
   "pular animação" skip.
 - **Red cards are cosmetic only** (never change the scoreline) and live on the
   `#cards` RNG stream so balance/determinism are untouched.
+
+## Torneio online (grupos → mata-mata)
+
+Ao fim do draft, `enterTorneio` computa um **Mundial** determinístico por seed:
+cada humano cai num **grupo de 4** (ele + 3 seleções da CPU, sorteadas das edições
+**mais fracas** pra os humanos costumarem se classificar) — round-robin, top 2
+avançam (`gerarGrupos`/`calcularTabela`). Os classificados (humanos + CPU) semeiam
+o mata-mata (`montarBracket`/`avancarBracket`). Competidores têm id genérico:
+humano = `player.id`, CPU = `cpu:<editionId>` (`competidorPvp` resolve os dois;
+`rotuloCompetidor` no cliente). O **campeão pode ser uma seleção da CPU**.
+`RoomState.grupos` carrega a fase de grupos. UI: `MpGrupos` (tabelas + jogos do
+humano ao vivo; CPU×CPU instantâneo) → `MpBracket`, sequenciados por `MpTorneio`.
 
 ## Disputa de pênaltis (empate no mata-mata)
 

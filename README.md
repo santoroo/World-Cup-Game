@@ -19,7 +19,7 @@ monte seus **11 titulares** e encare a campanha. O troféu máximo? O lendário 
 - 🌍 **~28 elencos icônicos** de Copas reais (Brasil 70/82/94/2002, Argentina 86/2022, Alemanha 2014, França 98/2018…) + o secreto **Colégio Módulo**.
 - 🧪 **Engine pura e determinística por _seed_**, isolada da UI e coberta por testes — mesmo resultado para o mesmo jogo (links de replay reproduzíveis).
 - ⚖️ **Matchmaking justo**: o melhor time é favorito, **nunca garantido** — viradas acontecem.
-- 🌐 **Multiplayer online** (2 a 5 jogadores), pela internet, sem LAN: draft alternado ao vivo e mata-mata até a final.
+- 🌐 **Multiplayer online** (2 a 5 jogadores), pela internet, sem LAN: draft alternado ao vivo, **fase de grupos** (cada um no seu grupo com seleções da CPU) e **mata-mata** até a final.
 - 🥅 **Pênaltis interativos:** empate no mata-mata vira disputa animada onde **você escolhe o canto** pra chutar e pra defender. No online cada lado é um jogador (timer de 10s); no solo você decide os dois lados do seu time e a máquina sorteia o adversário.
 - 📱 **Responsivo** desktop + celular, com cara de transmissão de futebol.
 
@@ -61,8 +61,9 @@ O `cloudflared` imprime uma URL pública (tipo `https://algo.trycloudflare.com`)
 3. Todos escolhem **formação + estilo** e marcam **Pronto**; o anfitrião 👑 começa.
 4. **Draft alternado (snake):** na sua vez você rola o dado, escolhe 1 jogador **e a vaga** onde ele entra — e pode reposicionar/trocar os escalados (igual ao solo).
    **Quem é escolhido some pra todo mundo** — e os times de todos aparecem ao vivo.
-5. Com os 11 de cada um prontos, rola o **mata-mata** (com _byes_ pros melhores) até a final.
-   **Empatou? Vai pros pênaltis interativos:** a cada cobrança, cobrador e goleiro escolhem o canto (10s, ou sorteia) e a bola/defesa são animadas. 🏆
+5. Com os 11 de cada um prontos, começa o **Mundial**: **fase de grupos** — cada um cai num grupo de 4 (você + 3 seleções da CPU), e os **2 melhores de cada grupo avançam** (a classificação sobe a cada jogo).
+6. **Mata-mata** com os classificados: os humanos só se cruzam aqui, se passarem.
+   **Empatou (humano × humano)? Vai pros pênaltis interativos:** a cada cobrança, cobrador e goleiro escolhem o canto (10s, ou sorteia) e a bola/defesa são animadas. 🏆
 
 | 💡 | |
 |---|---|
