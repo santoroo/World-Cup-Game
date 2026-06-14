@@ -16,9 +16,11 @@ import {
   registerSkip,
   roll as engineRoll,
   randomSeed,
-  simulateCampaign,
+  simulateCampaignInterativa,
   computeFinalScore,
   type CampaignResult,
+  type DirecaoPenalti,
+  type DisputaPenaltis,
   type DraftState,
   type Edition,
   type FinalScore,
@@ -49,6 +51,21 @@ interface GameState {
   team: TeamSnapshot | null;
   campaign: CampaignResult | null;
   finalScore: FinalScore | null;
+  /** Cantos escolhidos pelo usuário nas disputas de pênaltis (em ordem). */
+  escolhasPenaltis: DirecaoPenalti[];
+  /** Disputa de pênaltis aguardando a escolha do usuário (solo). */
+  disputaPenaltis: DisputaPenaltis | null;
+}
+
+/** Recalcula a campanha interativa a partir das escolhas de pênalti acumuladas. */
+function reduzirCampanha(s: GameState, escolhas: DirecaoPenalti[]): GameState {
+  if (!s.team) return s;
+  const user = { name: s.config.teamName, flag: '⭐', style: s.config.style, strength: s.team.strength, placed: s.team.placed };
+  const { campaign, disputa } = simulateCampaignInterativa(user, EDITIONS, s.seed, escolhas);
+  const finalScore = disputa
+    ? null
+    : computeFinalScore({ campaign, strength: s.team.strength, placed: s.team.placed, skipsUsed: s.draft.skipsUsed });
+  return { ...s, escolhasPenaltis: escolhas, campaign, disputaPenaltis: disputa, finalScore };
 }
 
 const DEFAULT_CONFIG: SetupConfig = {
@@ -69,6 +86,8 @@ function freshState(): GameState {
     team: null,
     campaign: null,
     finalScore: null,
+    escolhasPenaltis: [],
+    disputaPenaltis: null,
   };
 }
 
@@ -85,6 +104,7 @@ interface GameContextValue extends GameState {
   skipRoll: () => void;
   finishDraft: () => void;
   runSimulation: () => void;
+  escolherPenaltiSolo: (dir: DirecaoPenalti) => void;
   goFinal: () => void;
   restart: () => void;
   loadSharedResult: (state: {
@@ -93,6 +113,7 @@ interface GameContextValue extends GameState {
     team: TeamSnapshot;
     campaign: CampaignResult;
     finalScore: FinalScore;
+    escolhasPenaltis?: DirecaoPenalti[];
   }) => void;
 }
 
@@ -113,6 +134,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       team: null,
       campaign: null,
       finalScore: null,
+      escolhasPenaltis: [],
+      disputaPenaltis: null,
       phase: 'draft',
     }));
   }, []);
@@ -175,29 +198,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Inicia a campanha interativa (sem escolhas ainda; pausa na 1ª disputa, se houver).
   const runSimulation = useCallback(() => {
-    setState((s) => {
-      if (!s.team) return s;
-      const campaign = simulateCampaign(
-        {
-          name: s.config.teamName,
-          flag: '⭐',
-          style: s.config.style,
-          strength: s.team.strength,
-          placed: s.team.placed,
-        },
-        EDITIONS,
-        s.seed,
-      );
-      const finalScore = computeFinalScore({
-        campaign,
-        strength: s.team.strength,
-        placed: s.team.placed,
-        skipsUsed: s.draft.skipsUsed,
-      });
-      // Stay on the simulating phase so the screen can animate the campaign.
-      return { ...s, campaign, finalScore };
-    });
+    setState((s) => reduzirCampanha(s, []));
+  }, []);
+
+  // O usuário escolheu um canto numa disputa de pênaltis (cobrar ou defender).
+  const escolherPenaltiSolo = useCallback((dir: DirecaoPenalti) => {
+    setState((s) => (s.disputaPenaltis ? reduzirCampanha(s, [...s.escolhasPenaltis, dir]) : s));
   }, []);
 
   const goFinal = useCallback(() => setState((s) => ({ ...s, phase: 'final' })), []);
@@ -212,6 +220,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       team: shared.team,
       campaign: shared.campaign,
       finalScore: shared.finalScore,
+      escolhasPenaltis: shared.escolhasPenaltis ?? [],
+      disputaPenaltis: null,
       phase: 'final',
     }));
   }, []);
@@ -231,11 +241,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       skipRoll,
       finishDraft,
       runSimulation,
+      escolherPenaltiSolo,
       goFinal,
       restart,
       loadSharedResult,
     }),
-    [state, goHome, goToSetup, startDraft, rollDice, confirmPlayer, confirmPlayerInSlot, repositionPlayer, swapPlacedPlayers, skipRoll, finishDraft, runSimulation, goFinal, restart, loadSharedResult],
+    [state, goHome, goToSetup, startDraft, rollDice, confirmPlayer, confirmPlayerInSlot, repositionPlayer, swapPlacedPlayers, skipRoll, finishDraft, runSimulation, escolherPenaltiSolo, goFinal, restart, loadSharedResult],
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

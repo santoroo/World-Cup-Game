@@ -8,18 +8,18 @@ import { useGame } from '../game/useGameStore';
 import { buildShareUrl, encodeResult, saveLast } from '../lib/share';
 
 export function FinalResult() {
-  const { config, seed, team, campaign, finalScore, draft, restart, goHome } = useGame();
+  const { config, seed, team, campaign, finalScore, draft, escolhasPenaltis, restart, goHome } = useGame();
 
   // Persist + build the share URL once we have a result.
   const shareUrl = useMemo(() => {
     if (!team) return '';
-    const code = encodeResult(seed, config, team.placed, draft.skipsUsed);
+    const code = encodeResult(seed, config, team.placed, draft.skipsUsed, escolhasPenaltis);
     return buildShareUrl(code);
-  }, [team, seed, config, draft.skipsUsed]);
+  }, [team, seed, config, draft.skipsUsed, escolhasPenaltis]);
 
   useEffect(() => {
-    if (team && campaign) saveLast(seed, config, team.placed, draft.skipsUsed);
-  }, [team, campaign, seed, config, draft.skipsUsed]);
+    if (team && campaign) saveLast(seed, config, team.placed, draft.skipsUsed, escolhasPenaltis);
+  }, [team, campaign, seed, config, draft.skipsUsed, escolhasPenaltis]);
 
   if (!team || !campaign || !finalScore) {
     return (

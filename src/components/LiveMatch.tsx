@@ -17,7 +17,6 @@ import {
   type LiveMatchData,
   type SimSpeed,
 } from '../lib/matchTimeline';
-import { DisputaPenaltis, type DadosDisputaPenaltis } from './DisputaPenaltis';
 
 /** Speed selector state, persisted to localStorage. */
 export function useSimSpeed(): [SimSpeed, (s: SimSpeed) => void] {
@@ -57,9 +56,6 @@ export function LiveMatch({ data, speed, onDone }: { data: LiveMatchData; speed:
   onDoneRef.current = onDone;
   const speedRef = useRef(speed);
   speedRef.current = speed;
-  // Com pênaltis (solo), a conclusão fica a cargo da disputa, não do apito final.
-  const temPenaltisRef = useRef(!!data.penaltis);
-  temPenaltisRef.current = !!data.penaltis;
 
   useEffect(() => {
     let cancelled = false;
@@ -71,11 +67,9 @@ export function LiveMatch({ data, speed, onDone }: { data: LiveMatchData; speed:
       m += 1;
       setMinute(m);
       if (m >= 90) {
-        if (!temPenaltisRef.current) {
-          timer = setTimeout(() => {
-            if (!cancelled) onDoneRef.current();
-          }, END_PAUSE_MS[speedRef.current]);
-        }
+        timer = setTimeout(() => {
+          if (!cancelled) onDoneRef.current();
+        }, END_PAUSE_MS[speedRef.current]);
         return;
       }
       timer = setTimeout(tick, MS_PER_MINUTE[speedRef.current]);
@@ -135,15 +129,8 @@ export function LiveMatch({ data, speed, onDone }: { data: LiveMatchData; speed:
         ))}
       </div>
 
-      {/* Disputa de pênaltis (solo) — só após o apito final */}
-      {finished && data.penaltis && (
-        <div className="mt-3">
-          <DisputaPenaltis dados={dadosReplayPenaltis(data)} onConcluido={onDone} />
-        </div>
-      )}
-
-      {/* Final whistle (sem pênaltis) */}
-      {finished && !data.penaltis && (
+      {/* Final whistle */}
+      {finished && (
         <div className="mt-2 animate-card-in text-center">
           {data.penalties && (
             <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-300">decidido nos pênaltis</p>
@@ -153,20 +140,6 @@ export function LiveMatch({ data, speed, onDone }: { data: LiveMatchData; speed:
       )}
     </div>
   );
-}
-
-/** Monta o view-model de replay da disputa (solo) a partir do LiveMatchData. */
-function dadosReplayPenaltis(data: LiveMatchData): DadosDisputaPenaltis {
-  return {
-    stageLabel: data.stageLabel,
-    ladoA: { nome: data.home.name, icon: data.home.icon },
-    ladoB: { nome: data.away.name, icon: data.away.icon },
-    historico: data.penaltis!.historico,
-    encerrada: true,
-    vencedorLado: data.penaltis!.vencedorLado,
-    pendente: null,
-    meuLado: null,
-  };
 }
 
 function EventRow({ event }: { event: LiveEvent }) {

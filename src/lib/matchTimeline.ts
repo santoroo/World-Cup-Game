@@ -4,7 +4,7 @@
 // Pure (no React): types, tempo constants, persistence and the two builders.
 // ============================================================================
 
-import type { BracketMatch, ChutePenalti, MatchResult, MpPlayer } from '../engine';
+import type { BracketMatch, MatchResult, MpPlayer } from '../engine';
 
 export type SimSpeed = 'lento' | 'normal' | 'rapido';
 
@@ -75,8 +75,6 @@ export interface LiveMatchData {
   blurb: string;
   penalties: boolean;
   winner: LiveSideKey | 'draw';
-  /** Sequência da disputa de pênaltis pra tocar após o 0'→90' (solo). 'a' = home. */
-  penaltis?: { golsA: number; golsB: number; historico: ChutePenalti[]; vencedorLado: 'a' | 'b' } | null;
 }
 
 /** Merge scorers + red cards of both sides into one minute-sorted stream. */
@@ -110,7 +108,6 @@ export function liveFromMatch(match: MatchResult, teamName: string, index: numbe
     blurb: match.blurb,
     penalties,
     winner: match.win ? 'home' : match.draw ? 'draw' : 'away',
-    penaltis: match.penaltis ?? null,
   };
 }
 

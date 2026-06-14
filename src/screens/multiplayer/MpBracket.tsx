@@ -188,6 +188,7 @@ function dadosDisputa(
       d && !d.encerrada
         ? {
             vez: d.vez,
+            estado: d.prazo == null ? ('aguardando' as const) : ('escolhendo' as const),
             prazo: d.prazo,
             jaEscolhi: meuLado === d.vez ? d.direcaoChute != null : d.direcaoDefesa != null,
           }

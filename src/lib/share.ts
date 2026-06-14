@@ -10,8 +10,9 @@ import {
   computeTeamStrength,
   evaluateFit,
   FORMATIONS,
-  simulateCampaign,
+  simulateCampaignInterativa,
   type CampaignResult,
+  type DirecaoPenalti,
   type Edition,
   type FinalScore,
   type PlacedPlayer,
@@ -20,7 +21,7 @@ import {
 } from '../engine';
 import type { SetupConfig } from '../game/useGameStore';
 
-const VERSION = 1;
+const VERSION = 2;
 const STORAGE_KEY = 'copa-dos-sonhos:last';
 
 interface SharePayload {
@@ -29,6 +30,8 @@ interface SharePayload {
   config: SetupConfig;
   picks: { slotId: string; playerId: string }[];
   skips: number;
+  /** Cantos escolhidos pelo usuário nas disputas de pênaltis (em ordem). v2+. */
+  penaltis?: DirecaoPenalti[];
 }
 
 export interface RebuiltResult {
@@ -37,6 +40,7 @@ export interface RebuiltResult {
   team: TeamSnapshot;
   campaign: CampaignResult;
   finalScore: FinalScore;
+  escolhasPenaltis: DirecaoPenalti[];
 }
 
 function toPayload(
@@ -44,6 +48,7 @@ function toPayload(
   config: SetupConfig,
   placed: PlacedPlayer[],
   skips: number,
+  penaltis: DirecaoPenalti[],
 ): SharePayload {
   return {
     v: VERSION,
@@ -51,6 +56,7 @@ function toPayload(
     config,
     picks: placed.map((p) => ({ slotId: p.slotId, playerId: p.player.id })),
     skips,
+    penaltis,
   };
 }
 
@@ -59,8 +65,9 @@ export function encodeResult(
   config: SetupConfig,
   placed: PlacedPlayer[],
   skips: number,
+  penaltis: DirecaoPenalti[] = [],
 ): string {
-  const json = JSON.stringify(toPayload(seed, config, placed, skips));
+  const json = JSON.stringify(toPayload(seed, config, placed, skips, penaltis));
   return btoa(unescape(encodeURIComponent(json)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
@@ -72,7 +79,8 @@ function decodePayload(code: string): SharePayload | null {
     const b64 = code.replace(/-/g, '+').replace(/_/g, '/');
     const json = decodeURIComponent(escape(atob(b64)));
     const payload = JSON.parse(json) as SharePayload;
-    if (payload.v !== VERSION || !payload.picks?.length) return null;
+    // Aceita v1 (sem pênaltis → automático) e v2 (com as escolhas do usuário).
+    if (payload.v < 1 || payload.v > VERSION || !payload.picks?.length) return null;
     return payload;
   } catch {
     return null;
@@ -100,14 +108,17 @@ function rebuild(payload: SharePayload, editions: Edition[]): RebuiltResult | nu
 
   const strength = computeTeamStrength(placed, payload.config.formation);
   const team: TeamSnapshot = { formation: payload.config.formation, style: payload.config.style, placed, strength };
-  const campaign = simulateCampaign(
+  const escolhasPenaltis = payload.penaltis ?? [];
+  // Re-roda a campanha com as escolhas guardadas → reproduz exatamente o jogo.
+  const { campaign } = simulateCampaignInterativa(
     { name: payload.config.teamName, flag: '⭐', style: payload.config.style, strength, placed },
     editions,
     payload.seed,
+    escolhasPenaltis,
   );
   const finalScore = computeFinalScore({ campaign, strength, placed, skipsUsed: payload.skips });
 
-  return { config: payload.config, seed: payload.seed, team, campaign, finalScore };
+  return { config: payload.config, seed: payload.seed, team, campaign, finalScore, escolhasPenaltis };
 }
 
 export function decodeResult(code: string, editions: Edition[]): RebuiltResult | null {
@@ -138,9 +149,10 @@ export function saveLast(
   config: SetupConfig,
   placed: PlacedPlayer[],
   skips: number,
+  penaltis: DirecaoPenalti[] = [],
 ): void {
   try {
-    localStorage.setItem(STORAGE_KEY, encodeResult(seed, config, placed, skips));
+    localStorage.setItem(STORAGE_KEY, encodeResult(seed, config, placed, skips, penaltis));
   } catch {
     /* storage may be unavailable; ignore */
   }
