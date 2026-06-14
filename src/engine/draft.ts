@@ -65,6 +65,28 @@ export function availableEditions(state: DraftState, editions: Edition[]): Editi
   return editions.filter((e) => pickablePlayers(state, e).length > 0);
 }
 
+/** Estado de uma carta da edição no draft (pra exibir o elenco inteiro). */
+export interface OpcaoDraft {
+  player: Player;
+  /** true se dá pra escolher (não usado E encaixa numa vaga aberta). */
+  disponivel: boolean;
+  motivo: 'ok' | 'usado' | 'sem-vaga';
+}
+
+/**
+ * Todos os jogadores da edição com a disponibilidade de cada um. Os indisponíveis
+ * (já escolhidos ou sem vaga compatível) aparecem esmaecidos, dá pra ver mas não
+ * escolher.
+ */
+export function draftOptions(state: DraftState, edition: Edition): OpcaoDraft[] {
+  const slots = openSlots(state);
+  return edition.players.map((p) => {
+    if (isUsed(state, p)) return { player: p, disponivel: false, motivo: 'usado' };
+    const cabe = slots.some((s) => evaluateFit(p, s.position).allowed);
+    return { player: p, disponivel: cabe, motivo: cabe ? 'ok' : 'sem-vaga' };
+  });
+}
+
 /**
  * Roll the die: weighted pick among editions that can still contribute.
  * Returns the chosen edition and the advanced state (rollCount bumped).

@@ -6,8 +6,12 @@
 
 import type { Formation, Position, Slot } from './types';
 
+// Sigla exibida de cada posição (CDM/CAM em vez de DM/AM). Slots com label
+// próprio (LM, RM, LWB, RWB) continuam sobrescrevendo.
+const SIGLA_SLOT: Partial<Record<Position, string>> = { DM: 'CDM', AM: 'CAM' };
+
 function slot(id: string, position: Position, x: number, y: number, label?: string): Slot {
-  return { id, position, x, y, label: label ?? position };
+  return { id, position, x, y, label: label ?? SIGLA_SLOT[position] ?? position };
 }
 
 export const FORMATIONS: Record<Formation, Slot[]> = {

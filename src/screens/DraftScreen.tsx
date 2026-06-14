@@ -6,13 +6,13 @@ import { PlayerCard } from '../components/PlayerCard';
 import { TeamSummary } from '../components/TeamSummary';
 import {
   computeTeamStrength,
+  draftOptions,
   eligibleOpenSlots,
   evaluateFit,
   FORMATIONS,
   freeSkipsLeft,
   isComplete,
   openSlots,
-  pickablePlayers,
   progress,
   type DraftState,
   type PlacedPlayer,
@@ -53,7 +53,7 @@ export function DraftScreen() {
   );
 
   const options = useMemo(
-    () => (rolledEdition ? pickablePlayers(draft, rolledEdition) : []),
+    () => (rolledEdition ? draftOptions(draft, rolledEdition) : []),
     [rolledEdition, draft],
   );
 
@@ -266,17 +266,23 @@ export function DraftScreen() {
               {rolledEdition && !rolling && (
                 <div className="mt-4">
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {options.map((p) => (
+                    {options.map(({ player, disponivel, motivo }) => (
                       <PlayerCard
-                        key={p.id}
-                        player={p}
+                        key={player.id}
+                        player={player}
                         hideOverall={hideOverall}
-                        selected={pendingPlayer?.id === p.id}
-                        onClick={() => {
-                          setMovingSlotId(null);
-                          setPendingPlayer(p);
-                        }}
-                        fit={fitHint(p, draft)}
+                        selected={pendingPlayer?.id === player.id}
+                        onClick={
+                          disponivel
+                            ? () => {
+                                setMovingSlotId(null);
+                                setPendingPlayer(player);
+                              }
+                            : undefined
+                        }
+                        indisponivel={!disponivel}
+                        motivoIndisponivel={motivo === 'usado' ? 'Já escolhido' : 'Sem vaga'}
+                        fit={disponivel ? fitHint(player, draft) : undefined}
                       />
                     ))}
                   </div>

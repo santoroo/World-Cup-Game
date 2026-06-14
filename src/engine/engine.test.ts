@@ -84,14 +84,16 @@ describe('compatibility (4)', () => {
     expect(evaluateFit(rb, 'RB').allowed).toBe(true); // exact
     expect(evaluateFit(rb, 'LB').allowed).toBe(true); // fullback interchange
     expect(evaluateFit(rb, 'CB').allowed).toBe(true); // CB ↔ fullback
-    for (const bad of ['DM', 'CM', 'AM', 'LW', 'RW', 'ST', 'GK'] as const) {
-      expect(evaluateFit(rb, bad).allowed).toBe(false);
+    expect(evaluateFit(rb, 'RW').allowed).toBe(true); // ala: lateral ↔ ponta do mesmo lado
+    for (const bad of ['DM', 'CM', 'AM', 'LW', 'ST', 'GK'] as const) {
+      expect(evaluateFit(rb, bad).allowed).toBe(false); // lado esquerdo/meio/ataque central: não
     }
 
     const st = single('ST');
     expect(evaluateFit(st, 'LW').allowed).toBe(true); // front three
     expect(evaluateFit(st, 'RW').allowed).toBe(true);
-    for (const bad of ['CB', 'LB', 'RB', 'DM', 'CM', 'AM', 'GK'] as const) {
+    expect(evaluateFit(st, 'AM').allowed).toBe(true); // centroavante ↔ meia-atacante (falso 9)
+    for (const bad of ['CB', 'LB', 'RB', 'DM', 'CM', 'GK'] as const) {
       expect(evaluateFit(st, bad).allowed).toBe(false); // no striker-at-centreback
     }
   });

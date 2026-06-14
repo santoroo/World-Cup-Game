@@ -9,6 +9,9 @@
 //   • central mids             CM ↔ DM, CM ↔ AM small · DM ↔ AM medium
 //   • fullbacks interchange    LB ↔ RB                 (small penalty)
 //   • CB ↔ fullback            CB ↔ LB/RB              (medium penalty)
+//   • CAM aberto/avançado      AM ↔ LW/RW/ST           (medium penalty)
+//   • zagueiro que sai jogando CB ↔ DM                 (medium penalty)
+//   • ala (lateral↔ponta)      LB ↔ LW, RB ↔ RW         (medium penalty)
 // ============================================================================
 
 import type { Player, Position } from './types';
@@ -53,8 +56,25 @@ function pairFit(playerPos: Position, slotPos: Position): number | null {
   if (playerPos === 'CB' && inGroup(slotPos, FULLBACKS)) return FIT.MEDIUM;
   if (inGroup(playerPos, FULLBACKS) && slotPos === 'CB') return FIT.MEDIUM;
 
+  // Um pouco mais de liberdade — só onde faz sentido no futebol moderno:
+
+  // Meia-atacante (CAM) joga aberto (ponta) ou de centroavante (falso 9 / 2º atacante).
+  if (umDosDois(playerPos, slotPos, 'AM', ['LW', 'RW', 'ST'])) return FIT.MEDIUM;
+
+  // Zagueiro que sai jogando vira volante (CDM) — e vice-versa.
+  if (umDosDois(playerPos, slotPos, 'CB', ['DM'])) return FIT.MEDIUM;
+
+  // Lateral ↔ ponta do mesmo lado (ala): esquerda com esquerda, direita com direita.
+  if (umDosDois(playerPos, slotPos, 'LB', ['LW'])) return FIT.MEDIUM;
+  if (umDosDois(playerPos, slotPos, 'RB', ['RW'])) return FIT.MEDIUM;
+
   // Anything else is not a sensible position — forbidden.
   return null;
+}
+
+/** true se {a,b} == {umLado, algum de outroLado} (em qualquer ordem). */
+function umDosDois(a: Position, b: Position, umLado: Position, outroLado: Position[]): boolean {
+  return (a === umLado && outroLado.includes(b)) || (b === umLado && outroLado.includes(a));
 }
 
 export interface FitResult {

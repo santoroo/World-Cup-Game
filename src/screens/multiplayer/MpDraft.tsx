@@ -6,6 +6,7 @@ import { PlayerCard } from '../../components/PlayerCard';
 import { TeamSummary } from '../../components/TeamSummary';
 import {
   computeTeamStrength,
+  draftOptions,
   eligibleOpenSlots,
   evaluateFit,
   FORMATIONS,
@@ -18,10 +19,11 @@ import {
   type Slot,
 } from '../../engine';
 import { useMultiplayer } from '../../game/useMultiplayer';
+import { EDITIONS } from '../../lib/editions';
 import { positionLabel } from '../../lib/messages';
 
 export function MpDraft({ onExit }: { onExit: () => void }) {
-  const { room, me, isMyTurn, currentPlayer, myPickOptions, roll, pick, mover, trocar, skip } = useMultiplayer();
+  const { room, me, isMyTurn, currentPlayer, roll, pick, mover, trocar, skip } = useMultiplayer();
   const [diceVal, setDiceVal] = useState(6);
   const [rolling, setRolling] = useState(false);
   // Jogador recém-sorteado aguardando a escolha da vaga (igual ao solo).
@@ -84,6 +86,13 @@ export function MpDraft({ onExit }: { onExit: () => void }) {
       })
       .map((s) => s.id);
   }, [movingSlotId, me]);
+
+  // Elenco inteiro da edição sorteada, com disponibilidade (pra mostrar o resto esmaecido).
+  const roster = useMemo(() => {
+    if (!myDraft || !rolledEditionId) return [];
+    const edition = EDITIONS.find((e) => e.id === rolledEditionId);
+    return edition ? draftOptions(myDraft, edition) : [];
+  }, [myDraft, rolledEditionId]);
 
   if (!room || !me) return null;
 
@@ -256,18 +265,20 @@ export function MpDraft({ onExit }: { onExit: () => void }) {
                   )}
 
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {myPickOptions.map((p) => (
+                    {roster.map(({ player, disponivel, motivo }) => (
                       <PlayerCard
-                        key={p.id}
-                        player={p}
+                        key={player.id}
+                        player={player}
                         hideOverall={hideOverall}
-                        selected={pendingPlayer?.id === p.id}
-                        onClick={() => choosePending(p)}
-                        fit={myDraft ? fitHint(p, myDraft) : undefined}
+                        selected={pendingPlayer?.id === player.id}
+                        onClick={disponivel ? () => choosePending(player) : undefined}
+                        indisponivel={!disponivel}
+                        motivoIndisponivel={motivo === 'usado' ? 'Já escolhido' : 'Sem vaga'}
+                        fit={disponivel && myDraft ? fitHint(player, myDraft) : undefined}
                       />
                     ))}
                   </div>
-                  {myPickOptions.length === 0 && (
+                  {!roster.some((o) => o.disponivel) && (
                     <p className="text-sm text-white/55">Nenhuma carta disponível desse elenco — pule pra rolar de novo.</p>
                   )}
                 </div>

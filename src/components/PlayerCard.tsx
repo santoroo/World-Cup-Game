@@ -1,5 +1,5 @@
 import type { Player } from '../engine';
-import { positionLabel, rarityLabel } from '../lib/messages';
+import { positionLabel, rarityLabel, siglaPosicao } from '../lib/messages';
 
 const RARITY_STYLES: Record<string, { ring: string; chip: string; glow: string }> = {
   lenda: { ring: 'ring-amber-300/80', chip: 'bg-amber-300 text-amber-950', glow: 'shadow-[0_0_28px_-6px_rgba(245,197,66,0.7)]' },
@@ -17,26 +17,40 @@ interface PlayerCardProps {
   /** Optional fit info when shown as a draft option. */
   fit?: { label: string; perfect: boolean };
   compact?: boolean;
+  /** Esmaecido e não-clicável (dá pra ver, mas não escolher). */
+  indisponivel?: boolean;
+  /** Rótulo do porquê está indisponível (ex.: "Sem vaga", "Já escolhido"). */
+  motivoIndisponivel?: string;
 }
 
-export function PlayerCard({ player, hideOverall, selected, onClick, fit, compact }: PlayerCardProps) {
+export function PlayerCard({ player, hideOverall, selected, onClick, fit, compact, indisponivel, motivoIndisponivel }: PlayerCardProps) {
   const style = RARITY_STYLES[player.rarity] ?? RARITY_STYLES.comum;
-  const clickable = !!onClick;
+  const clickable = !!onClick && !indisponivel;
 
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={clickable ? onClick : undefined}
       disabled={!clickable}
+      aria-disabled={indisponivel}
       className={[
         'relative w-full rounded-2xl border border-white/10 bg-gradient-to-b from-pitch-700/90 to-pitch-900/95 p-3 text-left ring-1 transition',
         style.ring,
-        style.glow,
-        clickable ? 'cursor-pointer hover:-translate-y-1 hover:border-white/30' : 'cursor-default',
+        indisponivel ? '' : style.glow,
+        indisponivel
+          ? 'cursor-not-allowed opacity-40 grayscale'
+          : clickable
+            ? 'cursor-pointer hover:-translate-y-1 hover:border-white/30'
+            : 'cursor-default',
         selected ? 'outline outline-2 outline-gold-400 -translate-y-1' : '',
         'animate-card-in',
       ].join(' ')}
     >
+      {indisponivel && motivoIndisponivel && (
+        <span className="absolute right-1.5 top-1.5 z-10 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/80">
+          {motivoIndisponivel}
+        </span>
+      )}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 text-xs text-white/60">
@@ -49,7 +63,7 @@ export function PlayerCard({ player, hideOverall, selected, onClick, fit, compac
           <div className="mt-1 flex flex-wrap gap-1">
             {player.positions.map((p) => (
               <span key={p} className="rounded-md bg-black/30 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/80">
-                {p === 'ALL' ? 'CORINGA' : p}
+                {siglaPosicao(p)}
               </span>
             ))}
           </div>

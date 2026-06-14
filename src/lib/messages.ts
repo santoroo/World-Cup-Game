@@ -33,6 +33,14 @@ export function rarityLabel(rarity: string): string {
   }
 }
 
+/** Sigla curta exibida da posição (CDM/CAM em vez de DM/AM; CORINGA p/ ALL). */
+export function siglaPosicao(pos: string): string {
+  if (pos === 'DM') return 'CDM';
+  if (pos === 'AM') return 'CAM';
+  if (pos === 'ALL') return 'CORINGA';
+  return pos;
+}
+
 export function positionLabel(pos: string): string {
   const map: Record<string, string> = {
     GK: 'Goleiro',
