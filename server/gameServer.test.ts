@@ -131,6 +131,32 @@ async function playToBracket(clients: TestClient[]): Promise<void> {
   }
 }
 
+/** Conduz, pela rede, qualquer disputa de pênaltis até o chaveamento terminar. */
+async function resolverDisputasWS(clients: TestClient[]): Promise<void> {
+  const host = clients[0];
+  const byId = (id: string) => clients.find((c) => c.id === id)!;
+  let safety = 0;
+  while (host.state!.disputaPenaltis && safety++ < 600) {
+    const d = host.state!.disputaPenaltis!;
+    if (d.prazo == null) {
+      // Os dois envolvidos sinalizam que terminaram o replay → arma a cobrança.
+      byId(d.aId).send({ t: 'prontoPenalti' });
+      byId(d.bId).send({ t: 'prontoPenalti' });
+      await host.waitFor((c) => !c.state!.disputaPenaltis || c.state!.disputaPenaltis.prazo != null);
+      continue;
+    }
+    const cobrador = d.vez === 'a' ? d.aId : d.bId;
+    const defensor = d.vez === 'a' ? d.bId : d.aId;
+    const histAntes = d.historico.length;
+    byId(cobrador).send({ t: 'penalti', dir: 'esquerda' });
+    byId(defensor).send({ t: 'penalti', dir: 'direita' });
+    await host.waitFor((c) => {
+      const nd = c.state!.disputaPenaltis;
+      return !nd || nd.partidaId !== d.partidaId || nd.historico.length > histAntes;
+    });
+  }
+}
+
 describe('gameServer integration', () => {
   for (const n of [2, 3, 5]) {
     it(`runs a full ${n}-player game over WebSocket to a champion`, async () => {
@@ -141,6 +167,7 @@ describe('gameServer integration', () => {
       await host.waitFor((c) => c.state!.phase === 'draft');
 
       await playToBracket(clients);
+      await resolverDisputasWS(clients);
 
       expect(host.state!.phase).toBe('bracket');
       const champ = host.state!.bracket!.championId;

@@ -22,7 +22,9 @@ import {
   autoPickCurrent,
   configurePlayer,
   createRoom,
+  definirDirecaoPenalti,
   getPlayer,
+  marcarProntoPenalti,
   moverFor,
   MP_MAX_PLAYERS,
   randomSeed,
@@ -34,6 +36,7 @@ import {
   setReady,
   skipFor,
   startDraft,
+  timeoutPenalti,
   trocarFor,
   type RoomState,
 } from '../src/engine';
@@ -51,6 +54,8 @@ interface ServerRoom {
   /** playerId → live socket. */
   sockets: Map<string, WebSocket>;
   autoTimer?: ReturnType<typeof setTimeout>;
+  /** Timer do prazo/graça da disputa de pênaltis. */
+  penaltiTimer?: ReturnType<typeof setTimeout>;
   lastActivity: number;
 }
 
@@ -63,6 +68,7 @@ const rooms = new Map<string, ServerRoom>();
 const ctxOf = new WeakMap<WebSocket, ConnCtx>();
 
 const AUTO_PICK_DELAY_MS = 2500; // grace before auto-drafting for a vanished player
+const GRACE_PENALTI_MS = 20_000; // arma a disputa mesmo se um envolvido não sinalizar pronto
 const ROOM_IDLE_MS = 30 * 60 * 1000; // reap rooms left empty for half an hour
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 ambiguity
 
@@ -114,6 +120,43 @@ function scheduleAuto(room: ServerRoom): void {
     broadcast(room);
     scheduleAuto(room); // chain on if the next player is also gone
   }, AUTO_PICK_DELAY_MS);
+}
+
+// ---------------------------------------------------------------------------
+// Prazo da disputa de pênaltis (auto-escolhe se ninguém decidir a tempo)
+// ---------------------------------------------------------------------------
+
+function agendarPrazoPenalti(room: ServerRoom): void {
+  if (room.penaltiTimer) clearTimeout(room.penaltiTimer);
+  room.penaltiTimer = undefined;
+
+  const d = room.state.disputaPenaltis;
+  if (!d || d.encerrada) return;
+
+  // Ainda esperando os dois terminarem o replay: arma após um tempo de graça
+  // (cobre um envolvido desconectado que nunca sinaliza "pronto").
+  if (d.prazo == null) {
+    room.penaltiTimer = setTimeout(() => {
+      room.penaltiTimer = undefined;
+      const atual = room.state.disputaPenaltis;
+      if (!atual || atual.encerrada || atual.prazo != null) return;
+      room.state = marcarProntoPenalti(marcarProntoPenalti(room.state, atual.aId, Date.now()), atual.bId, Date.now());
+      broadcast(room);
+      agendarPrazoPenalti(room);
+    }, GRACE_PENALTI_MS);
+    return;
+  }
+
+  // Prazo armado: ao estourar, auto-completa as direções que faltam e resolve.
+  const restante = Math.max(0, d.prazo - Date.now());
+  room.penaltiTimer = setTimeout(() => {
+    room.penaltiTimer = undefined;
+    const atual = room.state.disputaPenaltis;
+    if (!atual || atual.encerrada || atual.prazo == null) return;
+    room.state = timeoutPenalti(room.state, Date.now());
+    broadcast(room);
+    agendarPrazoPenalti(room); // próxima cobrança (ou próxima disputa)
+  }, restante + 30);
 }
 
 // ---------------------------------------------------------------------------
@@ -212,6 +255,12 @@ function handleInRoom(ws: WebSocket, msg: Exclude<ClientMsg, { t: 'create' } | {
     case 'skip':
       room.state = skipFor(room.state, me);
       break;
+    case 'prontoPenalti':
+      room.state = marcarProntoPenalti(room.state, me, Date.now());
+      break;
+    case 'penalti':
+      room.state = definirDirecaoPenalti(room.state, me, msg.dir, Date.now());
+      break;
     case 'rematch':
       if (me !== room.state.hostId) return sendError(ws, 'bad_request', 'Só o anfitrião reinicia.');
       room.state = rematch(room.state, randomSeed());
@@ -223,6 +272,7 @@ function handleInRoom(ws: WebSocket, msg: Exclude<ClientMsg, { t: 'create' } | {
 
   broadcast(room);
   scheduleAuto(room);
+  agendarPrazoPenalti(room);
 }
 
 // ---------------------------------------------------------------------------
@@ -250,12 +300,14 @@ function detach(ws: WebSocket): void {
 
   if (room.state.players.length === 0 && room.sockets.size === 0) {
     if (room.autoTimer) clearTimeout(room.autoTimer);
+    if (room.penaltiTimer) clearTimeout(room.penaltiTimer);
     rooms.delete(room.state.id);
     return;
   }
 
   broadcast(room);
   scheduleAuto(room);
+  agendarPrazoPenalti(room);
 }
 
 // ---------------------------------------------------------------------------
@@ -271,6 +323,7 @@ function startReaper(): void {
       const anyConnected = [...room.sockets.values()].some((s) => s.readyState === WebSocket.OPEN);
       if (!anyConnected && now - room.lastActivity > ROOM_IDLE_MS) {
         if (room.autoTimer) clearTimeout(room.autoTimer);
+        if (room.penaltiTimer) clearTimeout(room.penaltiTimer);
         rooms.delete(code);
       }
     }
@@ -327,6 +380,9 @@ export function attachGameServer(httpServer: HttpServer): void {
 
 /** Test-only: clear all rooms between cases. */
 export function _resetRooms(): void {
-  for (const room of rooms.values()) if (room.autoTimer) clearTimeout(room.autoTimer);
+  for (const room of rooms.values()) {
+    if (room.autoTimer) clearTimeout(room.autoTimer);
+    if (room.penaltiTimer) clearTimeout(room.penaltiTimer);
+  }
   rooms.clear();
 }

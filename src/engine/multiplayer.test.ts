@@ -7,10 +7,12 @@ import {
   canStart,
   configurePlayer,
   createRoom,
+  definirDirecaoPenalti,
   eligibleOpenSlots,
   getPlayer,
   isDraftComplete,
   loadEditions,
+  marcarProntoPenalti,
   MAX_FREE_SKIPS,
   MP_MAX_PLAYERS,
   MP_SQUAD_SIZE,
@@ -23,6 +25,7 @@ import {
   setReady,
   skipFor,
   startDraft,
+  timeoutPenalti,
   type DraftState,
   type Edition,
   type RawEdition,
@@ -41,8 +44,8 @@ function lobby(n: number, seed = 'room-seed'): RoomState {
   return room;
 }
 
-/** Drive a complete draft using a deterministic "take the first option" policy. */
-function playFullDraft(start: RoomState, editions: Edition[]): { room: RoomState; turnOrder: string[] } {
+/** Conduz o draft (sem resolver pênaltis), parando ao entrar no chaveamento. */
+function conduzirDraft(start: RoomState, editions: Edition[]): { room: RoomState; turnOrder: string[] } {
   let room = startDraft(start);
   const turnOrder: string[] = [];
   let guard = 0;
@@ -58,6 +61,32 @@ function playFullDraft(start: RoomState, editions: Edition[]): { room: RoomState
     room = pickFor(room, editions, cur, opts[0].id);
   }
   return { room, turnOrder };
+}
+
+/** Draft completo + conduz qualquer disputa de pênaltis até o chaveamento terminar. */
+function playFullDraft(start: RoomState, editions: Edition[]): { room: RoomState; turnOrder: string[] } {
+  const { room, turnOrder } = conduzirDraft(start, editions);
+  return { room: resolverDisputasAteOFim(room), turnOrder };
+}
+
+/** Conduz qualquer disputa de pênaltis interativa até o chaveamento terminar. */
+function resolverDisputasAteOFim(start: RoomState): RoomState {
+  let room = start;
+  let guard = 0;
+  while (room.disputaPenaltis && guard++ < 2000) {
+    let d = room.disputaPenaltis;
+    if (d.prazo == null) {
+      // Os dois envolvidos "ficam prontos" (terminaram o replay) → arma a cobrança.
+      room = marcarProntoPenalti(room, d.aId, 0);
+      room = marcarProntoPenalti(room, d.bId, 0);
+      d = room.disputaPenaltis!;
+    }
+    const cobrador = d.vez === 'a' ? d.aId : d.bId;
+    const defensor = d.vez === 'a' ? d.bId : d.aId;
+    room = definirDirecaoPenalti(room, cobrador, 'esquerda', 0);
+    room = definirDirecaoPenalti(room, defensor, 'direita', 0);
+  }
+  return room;
 }
 
 describe('mp lobby', () => {
@@ -258,6 +287,56 @@ describe('mp bracket shape', () => {
         expect([m.aId, m.bId]).toContain(m.result.winnerId);
       }
     }
+  });
+});
+
+describe('mp disputa de pênaltis (online, interativa)', () => {
+  // Procura um seed cujo chaveamento pause num empate (disputa interativa).
+  function ateUmaDisputa(): RoomState | null {
+    for (let i = 0; i < 200; i++) {
+      const { room } = conduzirDraft(lobby(2, `pen-${i}`), EDITIONS);
+      if (room.disputaPenaltis) return room;
+    }
+    return null;
+  }
+
+  it('empate no mata-mata pausa o chaveamento e abre a disputa', () => {
+    const room = ateUmaDisputa();
+    expect(room, 'esperava um empate em 200 seeds').not.toBeNull();
+    const d = room!.disputaPenaltis!;
+    // Pausado: ainda sem campeão, e o confronto tem o tempo normal mas sem vencedor.
+    expect(room!.bracket!.championId).toBeNull();
+    const m = room!.bracket!.rounds.flat().find((x) => x.id === d.partidaId)!;
+    expect(m.result).not.toBeNull();
+    expect(m.result!.winnerId).toBeNull();
+    expect(m.result!.a.goals).toBe(m.result!.b.goals); // empate no tempo normal
+  });
+
+  it('só decide depois dos dois prontos; as escolhas levam a um campeão', () => {
+    let room = ateUmaDisputa()!;
+    const d = room.disputaPenaltis!;
+    // Antes de armar (ninguém pronto), escolher canto não faz nada.
+    expect(definirDirecaoPenalti(room, d.aId, 'esquerda', 0)).toBe(room);
+    // Os dois terminam o replay → arma a 1ª cobrança.
+    room = marcarProntoPenalti(room, d.aId, 0);
+    room = marcarProntoPenalti(room, d.bId, 0);
+    expect(room.disputaPenaltis!.prazo).not.toBeNull();
+    // Conduz as cobranças até encerrar.
+    room = resolverDisputasAteOFim(room);
+    expect(room.disputaPenaltis).toBeNull();
+    expect(room.players.map((p) => p.id)).toContain(room.bracket!.championId);
+  });
+
+  it('timeout auto-resolve a cobrança quando ninguém escolhe', () => {
+    let room = ateUmaDisputa()!;
+    const d = room.disputaPenaltis!;
+    room = marcarProntoPenalti(room, d.aId, 0);
+    room = marcarProntoPenalti(room, d.bId, 0);
+    const golsAntes = room.disputaPenaltis!.historico.length;
+    room = timeoutPenalti(room, 1_000_000); // estourou o prazo, ninguém escolheu
+    // Avançou (uma cobrança a mais no histórico) ou já encerrou a disputa.
+    const depois = room.disputaPenaltis ? room.disputaPenaltis.historico.length : Infinity;
+    expect(depois).toBeGreaterThan(golsAntes);
   });
 });
 

@@ -5,6 +5,7 @@
 // Ratings are never capped at 99 (bonus teams can run up the score).
 // ============================================================================
 
+import { gerarDisputaAutomatica } from './penaltis';
 import { createRng, type Rng } from './rng';
 import type {
   CampaignResult,
@@ -359,7 +360,7 @@ export interface PvpResult {
   blurb: string;
 }
 
-function pvpBlurb(goalsA: number, goalsB: number, penalties: boolean): string {
+export function pvpBlurb(goalsA: number, goalsB: number, penalties: boolean): string {
   if (penalties) return `Empate em ${goalsA} a ${goalsB}. Decisão nos pênaltis!`;
   const hi = Math.max(goalsA, goalsB);
   const lo = Math.min(goalsA, goalsB);
@@ -371,39 +372,69 @@ function pvpBlurb(goalsA: number, goalsB: number, penalties: boolean): string {
   return 'Decidido no detalhe, jogão equilibrado.';
 }
 
+/** Resultado só do tempo normal de um confronto PvP (sem decidir pênaltis). */
+export interface PvpTempoNormal {
+  golsA: number;
+  golsB: number;
+  scorersA: Scorer[];
+  scorersB: Scorer[];
+  redCardsA: RedCard[];
+  redCardsB: RedCard[];
+  empate: boolean;
+}
+
 /**
- * Simulate a single knockout tie between two user teams. Deterministic by seed.
- * Always returns a winner (penalties break a draw).
+ * Resolve apenas o tempo normal de um confronto PvP (gols/artilheiros/cartões),
+ * sem decidir o empate. Determinístico por seed. É o tijolo do chaveamento: no
+ * online o empate vira a disputa de pênaltis interativa; no auto/solo, automática.
  */
-export function simulatePvpMatch(a: PvpTeam, b: PvpTeam, seed: string): PvpResult {
+export function simularPvpTempoNormal(a: PvpTeam, b: PvpTeam, seed: string): PvpTempoNormal {
   const rng = createRng(seed);
   const { goalsA, goalsB } = resolveScoreline(
     sideFromRatings(a.strength, a.style),
     sideFromRatings(b.strength, b.style),
     rng,
   );
-
-  let winnerId: string;
-  let penalties = false;
-  if (goalsA > goalsB) winnerId = a.id;
-  else if (goalsB > goalsA) winnerId = b.id;
-  else {
-    const prob = Math.max(0.15, Math.min(0.85, 0.5 + (teamOverall(a.strength) - teamOverall(b.strength)) / 120));
-    winnerId = rng.chance(prob) ? a.id : b.id;
-    penalties = true;
-  }
-
   const cardRng = createRng(`${seed}#cards`);
   return {
-    goalsA,
-    goalsB,
+    golsA: goalsA,
+    golsB: goalsB,
     scorersA: assignScorers(a.placed, goalsA, rng),
     scorersB: assignScorers(b.placed, goalsB, rng),
     redCardsA: redCardsFor(nameFromPlaced(a.placed, a.name), cardRng),
     redCardsB: redCardsFor(nameFromPlaced(b.placed, b.name), cardRng),
+    empate: goalsA === goalsB,
+  };
+}
+
+/**
+ * Confronto PvP completo (tempo normal + pênaltis automáticos no empate).
+ * Determinístico por seed. Sempre retorna um vencedor. Usado fora do fluxo
+ * interativo online (chaveamento auto / testes de determinismo).
+ */
+export function simulatePvpMatch(a: PvpTeam, b: PvpTeam, seed: string): PvpResult {
+  const tn = simularPvpTempoNormal(a, b, seed);
+
+  let winnerId: string;
+  let penalties = false;
+  if (tn.golsA > tn.golsB) winnerId = a.id;
+  else if (tn.golsB > tn.golsA) winnerId = b.id;
+  else {
+    const disputa = gerarDisputaAutomatica('pvp', a.id, b.id, `${seed}#pen`);
+    winnerId = disputa.vencedorId ?? a.id;
+    penalties = true;
+  }
+
+  return {
+    goalsA: tn.golsA,
+    goalsB: tn.golsB,
+    scorersA: tn.scorersA,
+    scorersB: tn.scorersB,
+    redCardsA: tn.redCardsA,
+    redCardsB: tn.redCardsB,
     winnerId,
     penalties,
-    blurb: pvpBlurb(goalsA, goalsB, penalties),
+    blurb: pvpBlurb(tn.golsA, tn.golsB, penalties),
   };
 }
 

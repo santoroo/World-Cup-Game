@@ -4,7 +4,7 @@
 // so both sides import the exact same definitions.
 // ============================================================================
 
-import type { Formation, GameMode, PlayStyle, RoomState } from '../engine';
+import type { DirecaoPenalti, Formation, GameMode, PlayStyle, RoomState } from '../engine';
 
 /** Messages the client sends to the server. */
 export type ClientMsg =
@@ -19,6 +19,8 @@ export type ClientMsg =
   | { t: 'mover'; de: string; para: string }
   | { t: 'trocar'; a: string; b: string }
   | { t: 'skip' }
+  | { t: 'prontoPenalti' }
+  | { t: 'penalti'; dir: DirecaoPenalti }
   | { t: 'rematch' }
   | { t: 'leave' };
 

@@ -27,8 +27,23 @@ import {
   type DraftState,
 } from './draft';
 import { FORMATION_LIST } from './formations';
+import {
+  ambasDirecoesDefinidas,
+  armarPrazo,
+  autoCompletarDirecoes,
+  criarDisputa,
+  definirDirecao,
+  gerarDisputaAutomatica,
+  marcarPronto,
+  MS_PRAZO_PENALTI,
+  prontosParaComecar,
+  resolverChutePendente,
+  type ChutePenalti,
+  type DirecaoPenalti,
+  type DisputaPenaltis,
+} from './penaltis';
 import { createRng } from './rng';
-import { simulatePvpMatch } from './simulation';
+import { pvpBlurb, simularPvpTempoNormal, type PvpTeam } from './simulation';
 import type {
   Edition,
   Formation,
@@ -86,8 +101,11 @@ export interface BracketMatch {
   result: {
     a: BracketSide;
     b: BracketSide;
-    winnerId: string;
+    /** null enquanto um empate aguarda a decisão nos pênaltis. */
+    winnerId: string | null;
     penalties: boolean;
+    /** Placar + sequência da disputa, quando decidido nos pênaltis. */
+    penaltis: { golsA: number; golsB: number; historico: ChutePenalti[] } | null;
     blurb: string;
   } | null;
 }
@@ -119,6 +137,8 @@ export interface RoomState {
   /** Monotonic roll counter — feeds deterministic roll seeds. */
   rollNonce: number;
   bracket: Bracket | null;
+  /** Disputa de pênaltis em andamento (pausa o chaveamento). null = nenhuma. */
+  disputaPenaltis: DisputaPenaltis | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -141,6 +161,7 @@ export function createRoom(id: string, seed: string, hostId: string, mode: GameM
     rolledEditionId: null,
     rollNonce: 0,
     bracket: null,
+    disputaPenaltis: null,
   };
 }
 
@@ -469,13 +490,16 @@ function stageLabel(roundIndex: number, totalRounds: number): string {
   }
 }
 
-function toPvpTeam(p: MpPlayer): import('./simulation').PvpTeam {
+function toPvpTeam(p: MpPlayer): PvpTeam {
   return { id: p.id, name: p.name, style: p.style, strength: p.strength!, placed: p.placed };
 }
 
-/** Build and fully simulate the knockout bracket. Deterministic by room seed. */
-export function buildBracket(room: RoomState): Bracket {
-  const byId = new Map(room.players.map((p) => [p.id, p]));
+/**
+ * Monta o esqueleto do chaveamento: round 0 com participantes/walkovers vindos do
+ * sorteio por força; rounds seguintes com vagas vazias (preenchidas conforme os
+ * confrontos vão sendo resolvidos). Os resultados começam todos nulos.
+ */
+function montarBracket(room: RoomState): Bracket {
   // Seed by team overall (desc); top seeds earn the byes. Ties broken by id.
   const seeded = [...room.players].sort(
     (a, b) => (b.strength?.overall ?? 0) - (a.strength?.overall ?? 0) || a.id.localeCompare(b.id),
@@ -484,55 +508,127 @@ export function buildBracket(room: RoomState): Bracket {
   const size = nextPow2(n);
   const totalRounds = Math.max(1, Math.log2(size));
   const order = seedOrder(size);
-
-  // Round 0 participants in bracket order (null = bye / empty slot).
-  let current: (string | null)[] = order.map((s) => (s - 1 < n ? seeded[s - 1].id : null));
+  const participantesR0 = order.map((s) => (s - 1 < n ? seeded[s - 1].id : null));
 
   const rounds: BracketMatch[][] = [];
-  for (let roundIndex = 0; roundIndex < totalRounds; roundIndex++) {
+  for (let ri = 0; ri < totalRounds; ri++) {
     const matches: BracketMatch[] = [];
-    const winners: (string | null)[] = [];
-    for (let k = 0; k < current.length; k += 2) {
-      const aId = current[k];
-      const bId = current[k + 1];
-      const slot = k / 2;
-      const base: BracketMatch = {
-        id: `r${roundIndex}m${slot}`,
-        round: roundIndex,
-        slot,
-        stageLabel: stageLabel(roundIndex, totalRounds),
-        aId,
-        bId,
-        byeId: null,
-        result: null,
-      };
-
-      if (aId && bId) {
-        const res = simulatePvpMatch(
-          toPvpTeam(byId.get(aId)!),
-          toPvpTeam(byId.get(bId)!),
-          `${room.seed}#bracket#${base.id}`,
-        );
-        base.result = {
-          a: { playerId: aId, goals: res.goalsA, scorers: res.scorersA, redCards: res.redCardsA },
-          b: { playerId: bId, goals: res.goalsB, scorers: res.scorersB, redCards: res.redCardsB },
-          winnerId: res.winnerId,
-          penalties: res.penalties,
-          blurb: res.blurb,
-        };
-        winners.push(res.winnerId);
-      } else {
-        const advancing = aId ?? bId ?? null;
-        base.byeId = advancing;
-        winners.push(advancing);
+    const qtd = size / Math.pow(2, ri + 1);
+    for (let slot = 0; slot < qtd; slot++) {
+      let aId: string | null = null;
+      let bId: string | null = null;
+      let byeId: string | null = null;
+      if (ri === 0) {
+        aId = participantesR0[slot * 2] ?? null;
+        bId = participantesR0[slot * 2 + 1] ?? null;
+        if ((aId && !bId) || (!aId && bId)) byeId = aId ?? bId;
       }
-      matches.push(base);
+      matches.push({ id: `r${ri}m${slot}`, round: ri, slot, stageLabel: stageLabel(ri, totalRounds), aId, bId, byeId, result: null });
     }
     rounds.push(matches);
-    current = winners;
+  }
+  return { rounds, championId: null };
+}
+
+function clonarBracket(b: Bracket): Bracket {
+  return { rounds: b.rounds.map((r) => r.map((m) => ({ ...m }))), championId: b.championId };
+}
+
+function acharPartida(b: Bracket, id: string): BracketMatch | undefined {
+  for (const r of b.rounds) for (const m of r) if (m.id === id) return m;
+  return undefined;
+}
+
+/** Leva o vencedor (ou walkover) de um confronto para o confronto seguinte. */
+function propagar(b: Bracket, ri: number, slot: number, vencedorId: string): void {
+  const prox = ri + 1;
+  if (prox >= b.rounds.length) return;
+  const m = b.rounds[prox][Math.floor(slot / 2)];
+  if (!m) return;
+  if (slot % 2 === 0) m.aId = vencedorId;
+  else m.bId = vencedorId;
+}
+
+function montarResultado(
+  m: BracketMatch,
+  tn: ReturnType<typeof simularPvpTempoNormal>,
+  vencedorId: string | null,
+  disputa: DisputaPenaltis | null,
+): NonNullable<BracketMatch['result']> {
+  const decididoNosPenaltis = disputa != null;
+  let blurb: string;
+  if (vencedorId == null) blurb = pvpBlurb(tn.golsA, tn.golsB, true); // empate aguardando
+  else if (decididoNosPenaltis) {
+    const maior = Math.max(disputa!.golsA, disputa!.golsB);
+    const menor = Math.min(disputa!.golsA, disputa!.golsB);
+    blurb = `Empate em ${tn.golsA} a ${tn.golsB}. Decisão nos pênaltis: ${maior} a ${menor}!`;
+  } else blurb = pvpBlurb(tn.golsA, tn.golsB, false);
+
+  return {
+    a: { playerId: m.aId!, goals: tn.golsA, scorers: tn.scorersA, redCards: tn.redCardsA },
+    b: { playerId: m.bId!, goals: tn.golsB, scorers: tn.scorersB, redCards: tn.redCardsB },
+    winnerId: vencedorId,
+    penalties: decididoNosPenaltis || vencedorId == null,
+    penaltis: disputa ? { golsA: disputa.golsA, golsB: disputa.golsB, historico: disputa.historico } : null,
+    blurb,
+  };
+}
+
+/**
+ * Resolve o chaveamento em ordem (round-major) até o fim ou até o primeiro
+ * empate. Com `auto`, resolve empates por pênaltis automáticos (determinístico).
+ * Sem `auto` (online), grava o tempo normal e cria a disputa interativa, pausando.
+ */
+function avancarBracket(room: RoomState, opts: { auto?: boolean } = {}): RoomState {
+  const bracket = clonarBracket(room.bracket!);
+  const byId = new Map(room.players.map((p) => [p.id, p]));
+
+  for (let ri = 0; ri < bracket.rounds.length; ri++) {
+    for (const m of bracket.rounds[ri]) {
+      if (m.byeId) {
+        propagar(bracket, ri, m.slot, m.byeId);
+        continue;
+      }
+      // Empate aguardando pênaltis (winnerId null) → pausa aqui.
+      if (m.result && m.result.winnerId == null) return { ...room, bracket };
+      // Já decidido → reforça a propagação (idempotente) e segue.
+      if (m.result && m.result.winnerId) {
+        propagar(bracket, ri, m.slot, m.result.winnerId);
+        continue;
+      }
+      // Lados ainda indefinidos (dependem de rounds anteriores) → espera.
+      if (m.aId == null || m.bId == null) continue;
+
+      const tn = simularPvpTempoNormal(toPvpTeam(byId.get(m.aId)!), toPvpTeam(byId.get(m.bId)!), `${room.seed}#bracket#${m.id}`);
+      const seedPen = `${room.seed}#bracket#${m.id}#pen`;
+
+      if (!tn.empate) {
+        const vencedorId = tn.golsA > tn.golsB ? m.aId : m.bId;
+        m.result = montarResultado(m, tn, vencedorId, null);
+        propagar(bracket, ri, m.slot, vencedorId);
+        continue;
+      }
+      if (opts.auto) {
+        const disputa = gerarDisputaAutomatica(m.id, m.aId, m.bId, seedPen);
+        m.result = montarResultado(m, tn, disputa.vencedorId!, disputa);
+        propagar(bracket, ri, m.slot, disputa.vencedorId!);
+        continue;
+      }
+      // Online: grava o tempo normal pendente e cria a disputa interativa (pausa).
+      m.result = montarResultado(m, tn, null, null);
+      return { ...room, bracket, disputaPenaltis: criarDisputa(m.id, m.aId, m.bId, seedPen) };
+    }
   }
 
-  return { rounds, championId: current[0] ?? null };
+  const ultima = bracket.rounds[bracket.rounds.length - 1][0];
+  const championId = ultima?.result?.winnerId ?? ultima?.byeId ?? null;
+  return { ...room, bracket: { ...bracket, championId }, disputaPenaltis: null };
+}
+
+/** Monta e resolve TODO o chaveamento automaticamente. Determinístico por seed. */
+export function buildBracket(room: RoomState): Bracket {
+  const base: RoomState = { ...room, bracket: montarBracket(room), disputaPenaltis: null };
+  return avancarBracket(base, { auto: true }).bracket!;
 }
 
 function enterBracket(room: RoomState): RoomState {
@@ -540,15 +636,82 @@ function enterBracket(room: RoomState): RoomState {
     ...p,
     strength: p.strength ?? computeTeamStrength(p.placed, p.formation),
   }));
+  const comStrength: RoomState = { ...room, players };
   const staged: RoomState = {
-    ...room,
-    players,
+    ...comStrength,
     phase: 'bracket',
     currentId: null,
     rolledEditionId: null,
+    disputaPenaltis: null,
+    bracket: montarBracket(comStrength),
   };
-  const bracket = buildBracket(staged);
-  return { ...staged, bracket };
+  return avancarBracket(staged);
+}
+
+// ---------------------------------------------------------------------------
+// Disputa de pênaltis (online, interativa)
+// ---------------------------------------------------------------------------
+
+/** Lado do jogador na disputa ('a'/'b'), ou null se for espectador. */
+function ladoDoJogador(d: DisputaPenaltis, playerId: string): 'a' | 'b' | null {
+  if (playerId === d.aId) return 'a';
+  if (playerId === d.bId) return 'b';
+  return null;
+}
+
+/**
+ * Um jogador escolheu uma direção: canto do chute (se é a vez dele) ou da defesa
+ * (se é o goleiro). Resolve a cobrança quando os dois escolheram.
+ */
+export function definirDirecaoPenalti(room: RoomState, playerId: string, dir: DirecaoPenalti, agora: number): RoomState {
+  const d = room.disputaPenaltis;
+  if (!d || d.encerrada || d.prazo == null) return room; // só depois que a disputa começa
+  const lado = ladoDoJogador(d, playerId);
+  if (!lado) return room; // espectador não interfere
+  const papel = lado === d.vez ? 'chute' : 'defesa';
+  let nova = definirDirecao(d, papel, dir);
+  if (ambasDirecoesDefinidas(nova)) nova = resolverChutePendente(nova, agora, MS_PRAZO_PENALTI);
+  const r: RoomState = { ...room, disputaPenaltis: nova };
+  return nova.encerrada ? resolverDisputaConcluida(r) : r;
+}
+
+/** Jogador terminou o replay 0'→90'. Quando os dois envolvidos terminam, arma a 1ª cobrança. */
+export function marcarProntoPenalti(room: RoomState, playerId: string, agora: number): RoomState {
+  const d = room.disputaPenaltis;
+  if (!d || d.encerrada) return room;
+  let nova = marcarPronto(d, playerId);
+  if (prontosParaComecar(nova)) nova = armarPrazo(nova, agora, MS_PRAZO_PENALTI);
+  return { ...room, disputaPenaltis: nova };
+}
+
+/** O prazo da cobrança estourou: completa as direções que faltam e resolve. */
+export function timeoutPenalti(room: RoomState, agora: number): RoomState {
+  const d = room.disputaPenaltis;
+  if (!d || d.encerrada || d.prazo == null) return room;
+  let nova = autoCompletarDirecoes(d);
+  nova = resolverChutePendente(nova, agora, MS_PRAZO_PENALTI);
+  const r: RoomState = { ...room, disputaPenaltis: nova };
+  return nova.encerrada ? resolverDisputaConcluida(r) : r;
+}
+
+/** Grava o resultado da disputa encerrada no confronto e segue o chaveamento. */
+function resolverDisputaConcluida(room: RoomState): RoomState {
+  const d = room.disputaPenaltis;
+  if (!d || !d.encerrada || !room.bracket) return room;
+  const bracket = clonarBracket(room.bracket);
+  const m = acharPartida(bracket, d.partidaId);
+  if (m && m.result) {
+    const maior = Math.max(d.golsA, d.golsB);
+    const menor = Math.min(d.golsA, d.golsB);
+    m.result = {
+      ...m.result,
+      winnerId: d.vencedorId,
+      penalties: true,
+      penaltis: { golsA: d.golsA, golsB: d.golsB, historico: d.historico },
+      blurb: `Empate em ${m.result.a.goals} a ${m.result.b.goals}. Decisão nos pênaltis: ${maior} a ${menor}!`,
+    };
+  }
+  return avancarBracket({ ...room, bracket, disputaPenaltis: null });
 }
 
 // ---------------------------------------------------------------------------
@@ -577,5 +740,6 @@ export function rematch(room: RoomState, newSeed: string): RoomState {
     rolledEditionId: null,
     rollNonce: 0,
     bracket: null,
+    disputaPenaltis: null,
   };
 }
