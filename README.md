@@ -20,6 +20,7 @@ monte seus **11 titulares** e encare a campanha. O troféu máximo? O lendário 
 - 🧪 **Engine pura e determinística por _seed_**, isolada da UI e coberta por testes — mesmo resultado para o mesmo jogo (links de replay reproduzíveis).
 - ⚖️ **Matchmaking justo**: o melhor time é favorito, **nunca garantido** — viradas acontecem.
 - 🌐 **Multiplayer online** (2 a 5 jogadores), pela internet, sem LAN: draft alternado ao vivo e mata-mata até a final.
+- 🥅 **Pênaltis interativos no online:** empate no mata-mata vira disputa onde **você escolhe o canto** (e, no gol, pra onde pular), com timer de 10s e animação. No solo, a disputa é animada automaticamente.
 - 📱 **Responsivo** desktop + celular, com cara de transmissão de futebol.
 
 ---
@@ -58,9 +59,10 @@ O `cloudflared` imprime uma URL pública (tipo `https://algo.trycloudflare.com`)
 1. **Você** → **Criar sala** → recebe um **código de 4 letras**.
 2. **Amigos** → **Entrar com código** → digitam o código.
 3. Todos escolhem **formação + estilo** e marcam **Pronto**; o anfitrião 👑 começa.
-4. **Draft alternado (snake):** na sua vez você rola o dado e escolhe 1 jogador.
+4. **Draft alternado (snake):** na sua vez você rola o dado, escolhe 1 jogador **e a vaga** onde ele entra — e pode reposicionar/trocar os escalados (igual ao solo).
    **Quem é escolhido some pra todo mundo** — e os times de todos aparecem ao vivo.
-5. Com os 11 de cada um prontos, rola o **mata-mata** (com _byes_ pros melhores) até a final. 🏆
+5. Com os 11 de cada um prontos, rola o **mata-mata** (com _byes_ pros melhores) até a final.
+   **Empatou? Vai pros pênaltis interativos:** a cada cobrança, cobrador e goleiro escolhem o canto (10s, ou sorteia) e a bola/defesa são animadas. 🏆
 
 | 💡 | |
 |---|---|
@@ -76,7 +78,8 @@ O `cloudflared` imprime uma URL pública (tipo `https://algo.trycloudflare.com`)
 - **Atributos derivados:** cada jogador é só `positions` + `overall`; os 7 atributos (ataque, meio, defesa, goleiro, técnica, físico, decisão) são derivados pela posição. Sem teto para o Colégio Módulo (overall pode passar de 99 de propósito).
 - **Compatibilidade de posição:** encaixes sensatos têm penalidade pequena/média (ponta↔centroavante, volante↔meia, zagueiro↔lateral); o resto é proibido. Jogador de linha no gol e goleiro na linha: bloqueados (salvo o coringa `ALL`).
 - **Química:** sobe com mesmo país, mesma década, todos na posição e formação coerente; cai com gente fora de posição.
-- **Matchmaking (sorte × estratégia):** modelo de _expected goals_ com um fator de **forma/sorte por jogo**. Times parelhos viram cara-ou-coroa; um azarão inspirado bate um favorito de vez em quando; uma vantagem enorme ainda pode escorregar num dia ruim. Mata-mata empatado vai pros **pênaltis** (levemente puxados pelo overall). Tudo determinístico por _seed_.
+- **Matchmaking (sorte × estratégia):** modelo de _expected goals_ com um fator de **forma/sorte por jogo**. Times parelhos viram cara-ou-coroa; um azarão inspirado bate um favorito de vez em quando; uma vantagem enorme ainda pode escorregar num dia ruim. Tudo determinístico por _seed_.
+- **Pênaltis no mata-mata:** empate vai pra disputa (melhor de 5 + morte súbita). No **online** é **interativa** — cobrador e goleiro escolhem o canto (esquerda/meio/direita) num timer de 10s; acertou o mesmo canto, defesa; canto diferente, quase sempre gol. No **solo**, é animada automaticamente (determinística por _seed_, levemente puxada pelo overall). As escolhas humanas são a única entrada fora do _seed_ — e só no online, que não tem replay por _seed_.
 
 ---
 

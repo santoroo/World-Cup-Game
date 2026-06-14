@@ -36,8 +36,9 @@ src/
 │  ├─ compatibility.ts position fit rules (evaluateFit)
 │  ├─ chemistry.ts    computeTeamStrength(placed, formation)
 │  ├─ draft.ts        roll/pick/place/move/swap, skip limit (MAX_FREE_SKIPS)
-│  ├─ simulation.ts   xG + per-match "form" model; simulateMatch / simulatePvpMatch / simulateCampaign
-│  └─ multiplayer.ts  room reducers: lobby → snake draft → knockout bracket
+│  ├─ simulation.ts   xG + "form" model; simularPvpTempoNormal / simulateMatch / simulateCampaign
+│  ├─ penaltis.ts     disputa de pênaltis (pura): canto-do-chute × canto-da-defesa + sorte; interativa (online) ou gerarDisputaAutomatica (solo)
+│  └─ multiplayer.ts  room reducers: lobby → snake draft → knockout bracket (resolvido em ordem; pausa no empate p/ a disputa interativa)
 ├─ data/editions.json ~28 real squads + the secret "Colégio Módulo" (isBonus)
 ├─ game/           # thin React stores over the engine
 │  ├─ useGameStore.tsx   solo flow (phases: home→setup→draft→simulating→final)
@@ -91,6 +92,25 @@ Rápido** (`lib/matchTimeline.ts`, persisted to localStorage via `useSimSpeed`).
   "pular animação" skip.
 - **Red cards are cosmetic only** (never change the scoreline) and live on the
   `#cards` RNG stream so balance/determinism are untouched.
+
+## Disputa de pênaltis (empate no mata-mata)
+
+Engine puro em `engine/penaltis.ts` (stream `#pen`, não mexe em gols/cartões).
+Cada cobrança: cobrador escolhe o canto, goleiro escolhe pra onde pular — **mesmo
+canto ⇒ defesa provável; canto diferente ⇒ quase sempre gol** (melhor de 5 + morte
+súbita). Render compartilhado em `components/DisputaPenaltis.tsx` (animação).
+- **Online (interativo):** o chaveamento é resolvido **em ordem** e **pausa** no
+  empate (`avancarBracket` cria `RoomState.disputaPenaltis`). O `MpBracket` toca o
+  0'→90' e, ao fim, envia `prontoPenalti`; o servidor **arma o prazo de 10s só
+  quando os dois envolvidos terminam** (ou após uma graça, p/ desconexão), e
+  `timeoutPenalti` sorteia a direção de quem não escolheu. Mensagens
+  `prontoPenalti`/`penalti`. **As escolhas humanas são a única entrada fora do
+  seed** — aceitável porque o online não tem replay por seed.
+- **Solo (automático):** `gerarDisputaAutomatica` (determinística por seed, viés
+  leve pelo overall via `favorA`) anexa a sequência ao `MatchResult.penaltis`; o
+  `LiveMatch` toca a animação após o 0'→90'.
+- `MpDraft` tem **paridade com o solo**: escolhe a vaga no `pick(cardId, slotId)` e
+  reposiciona/troca (`mover`/`trocar`) durante o draft.
 
 ## Gotchas
 
