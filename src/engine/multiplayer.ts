@@ -32,6 +32,7 @@ import type {
   PlacedPlayer,
   Player,
   PlayStyle,
+  RedCard,
   Scorer,
   TeamStrength,
 } from './types';
@@ -64,6 +65,7 @@ export interface BracketSide {
   playerId: string;
   goals: number;
   scorers: Scorer[];
+  redCards: RedCard[];
 }
 
 export interface BracketMatch {
@@ -462,8 +464,8 @@ export function buildBracket(room: RoomState): Bracket {
           `${room.seed}#bracket#${base.id}`,
         );
         base.result = {
-          a: { playerId: aId, goals: res.goalsA, scorers: res.scorersA },
-          b: { playerId: bId, goals: res.goalsB, scorers: res.scorersB },
+          a: { playerId: aId, goals: res.goalsA, scorers: res.scorersA, redCards: res.redCardsA },
+          b: { playerId: bId, goals: res.goalsB, scorers: res.scorersB, redCards: res.redCardsB },
           winnerId: res.winnerId,
           penalties: res.penalties,
           blurb: res.blurb,

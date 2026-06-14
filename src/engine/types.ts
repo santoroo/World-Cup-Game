@@ -146,6 +146,12 @@ export interface Scorer {
   minute: number;
 }
 
+/** Expulsão na partida — puramente cosmética (não altera o placar). */
+export interface RedCard {
+  name: string;
+  minute: number;
+}
+
 export interface MatchResult {
   stage: string;
   opponent: Opponent;
@@ -153,6 +159,9 @@ export interface MatchResult {
   awayGoals: number;
   homeScorers: Scorer[];
   awayScorers: Scorer[];
+  /** Expulsões (cosméticas) de cada lado, para a animação ao vivo. */
+  homeRedCards: RedCard[];
+  awayRedCards: RedCard[];
   /** Jogador destaque da partida (nome). */
   manOfTheMatch: string;
   blurb: string;

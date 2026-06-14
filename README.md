@@ -19,7 +19,7 @@ monte seus **11 titulares** e encare a campanha. O troféu máximo? O lendário 
 - 🌍 **~28 elencos icônicos** de Copas reais (Brasil 70/82/94/2002, Argentina 86/2022, Alemanha 2014, França 98/2018…) + o secreto **Colégio Módulo**.
 - 🧪 **Engine pura e determinística por _seed_**, isolada da UI e coberta por testes — mesmo resultado para o mesmo jogo (links de replay reproduzíveis).
 - ⚖️ **Matchmaking justo**: o melhor time é favorito, **nunca garantido** — viradas acontecem.
-- 🌐 **Multiplayer online de verdade** (2 a 5 jogadores), pela internet, sem LAN: draft alternado ao vivo e mata-mata até a final.
+- 🌐 **Multiplayer online** (2 a 5 jogadores), pela internet, sem LAN: draft alternado ao vivo e mata-mata até a final.
 - 📱 **Responsivo** desktop + celular, com cara de transmissão de futebol.
 
 ---

@@ -16,6 +16,12 @@ const STYLES: { id: PlayStyle; label: string }[] = [
   { id: 'ofensivo', label: 'Ofensivo' },
 ];
 
+const MODE_LABEL: Record<string, string> = {
+  classico: '🃏 Clássico',
+  almanaque: '🔒 Almanaque',
+  caos: '🌀 Caos',
+};
+
 export function MpLobby({ onExit }: { onExit: () => void }) {
   const { room, me, isHost, configure, setReady, start } = useMultiplayer();
   const [copied, setCopied] = useState(false);
@@ -52,6 +58,9 @@ export function MpLobby({ onExit }: { onExit: () => void }) {
             </button>
             <p className="mt-1 text-sm text-white/55">
               {copied ? '✅ Copiado!' : 'Toque pra copiar e mande pros amigos entrarem.'}
+            </p>
+            <p className="mt-2 inline-block rounded-full border border-white/15 bg-black/30 px-3 py-1 text-xs font-semibold text-white/70">
+              Modo: {MODE_LABEL[room.mode] ?? room.mode}
             </p>
           </div>
 

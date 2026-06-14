@@ -67,6 +67,15 @@ describe('mp lobby', () => {
     expect(new Set(room.players.map((p) => p.avatar)).size).toBe(MP_MAX_PLAYERS); // distinct avatars
   });
 
+  it('remembers the chosen game mode (e.g. almanaque) through the draft', () => {
+    const room = createRoom('ABCD', 's', 'p1', 'almanaque');
+    expect(room.mode).toBe('almanaque');
+    const drafting = startDraft(lobby(2, 'mode-seed'));
+    expect(drafting.mode).toBe('classico'); // lobby() builds a classico room
+    const alm = createRoom('EFGH', 'mode2', 'p1', 'almanaque');
+    expect(alm.mode).toBe('almanaque');
+  });
+
   it('ignores duplicate ids', () => {
     let room = addPlayer(createRoom('ABCD', 's', 'x'), { id: 'p1', name: 'A' });
     room = addPlayer(room, { id: 'p1', name: 'again' });

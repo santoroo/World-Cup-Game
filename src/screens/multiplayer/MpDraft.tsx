@@ -84,7 +84,7 @@ export function MpDraft({ onExit }: { onExit: () => void }) {
         {/* My pitch + my action area */}
         <div className="space-y-3">
           <FormationPitch formation={me.formation} placed={me.placed} />
-          <TeamSummary strength={myStrength} compact />
+          <TeamSummary strength={myStrength} compact hidden={hideOverall} />
         </div>
 
         <div className="space-y-4">

@@ -1,25 +1,37 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../../components/Button';
 import { FormationPitch } from '../../components/FormationPitch';
+import { LiveMatch, SpeedSelector, useSimSpeed } from '../../components/LiveMatch';
 import type { BracketMatch, MpPlayer } from '../../engine';
 import { useMultiplayer } from '../../game/useMultiplayer';
+import { liveFromBracket } from '../../lib/matchTimeline';
 
 export function MpBracket({ onExit }: { onExit: () => void }) {
   const { room, isHost, rematch } = useMultiplayer();
+  const [speed, setSpeed] = useSimSpeed();
   const rounds = room?.bracket?.rounds ?? [];
-  const [revealed, setRevealed] = useState(0);
 
-  // Reveal one knockout round at a time for some drama.
+  // Flatten the bracket into one ordered sequence and walk a cursor through it,
+  // playing each tie live in round/slot order. `played` = ties fully revealed.
+  const total = rounds.reduce((n, r) => n + r.length, 0);
+  const [played, setPlayed] = useState(0);
+  const allRevealed = played >= total;
+
+  // Byes (and any result-less slot) carry no animation — skip past them.
+  const current = flatItem(rounds, played);
   useEffect(() => {
-    if (revealed >= rounds.length) return;
-    const id = setTimeout(() => setRevealed((r) => r + 1), 1300);
-    return () => clearTimeout(id);
-  }, [revealed, rounds.length]);
+    if (allRevealed) return;
+    if (current && (current.byeId || !current.result)) {
+      const id = setTimeout(() => setPlayed((p) => p + 1), 500);
+      return () => clearTimeout(id);
+    }
+  }, [played, current, allRevealed]);
 
   if (!room || !room.bracket) return null;
   const byId = new Map(room.players.map((p) => [p.id, p]));
-  const allRevealed = revealed >= rounds.length;
   const champion = allRevealed ? byId.get(room.bracket.championId ?? '') ?? null : null;
+
+  let offset = 0;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -28,6 +40,12 @@ export function MpBracket({ onExit }: { onExit: () => void }) {
         <h1 className="font-display text-4xl text-white">Mata-mata</h1>
         <span className="w-12" />
       </header>
+
+      {!allRevealed && (
+        <div className="mb-6 flex justify-center">
+          <SpeedSelector speed={speed} onChange={setSpeed} />
+        </div>
+      )}
 
       {/* Champion */}
       {champion && (
@@ -41,23 +59,41 @@ export function MpBracket({ onExit }: { onExit: () => void }) {
         </div>
       )}
 
-      {/* Rounds */}
+      {/* Rounds, revealed tie by tie */}
       <div className="space-y-6">
-        {rounds.slice(0, revealed).map((round, i) => (
-          <div key={i}>
-            <h3 className="mb-2 text-center font-display text-2xl text-white/80">{round[0]?.stageLabel}</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {round.map((m) => (
-                <MatchRow key={m.id} match={m} byId={byId} />
-              ))}
+        {rounds.map((round, ri) => {
+          const roundOffset = offset;
+          offset += round.length;
+          if (roundOffset > played) return null; // round not reached yet
+          const visibleCount = Math.min(round.length, played - roundOffset + 1);
+
+          return (
+            <div key={ri}>
+              <h3 className="mb-2 text-center font-display text-2xl text-white/80">{round[0]?.stageLabel}</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {round.slice(0, visibleCount).map((m, j) => {
+                  const globalIndex = roundOffset + j;
+                  const isCurrent = globalIndex === played;
+                  const data = m.result && !m.byeId ? liveFromBracket(m, byId) : null;
+
+                  if (isCurrent && data) {
+                    return (
+                      <div key={m.id} className="sm:col-span-2">
+                        <LiveMatch data={data} speed={speed} onDone={() => setPlayed((p) => p + 1)} />
+                      </div>
+                    );
+                  }
+                  return <MatchRow key={m.id} match={m} byId={byId} />;
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {!allRevealed && (
         <div className="mt-6 text-center">
-          <button onClick={() => setRevealed(rounds.length)} className="text-sm text-white/50 hover:text-white">
+          <button onClick={() => setPlayed(total)} className="text-sm text-white/50 hover:text-white">
             pular animação →
           </button>
         </div>
@@ -75,6 +111,16 @@ export function MpBracket({ onExit }: { onExit: () => void }) {
       )}
     </div>
   );
+}
+
+/** The flattened tie at global index `i`, or null if out of range. */
+function flatItem(rounds: BracketMatch[][], i: number): BracketMatch | null {
+  let idx = i;
+  for (const round of rounds) {
+    if (idx < round.length) return round[idx];
+    idx -= round.length;
+  }
+  return null;
 }
 
 function MatchRow({ match, byId }: { match: BracketMatch; byId: Map<string, MpPlayer> }) {

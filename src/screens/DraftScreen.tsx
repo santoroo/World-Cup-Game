@@ -177,7 +177,7 @@ export function DraftScreen() {
             hasPlaced={draft.placed.length > 0}
             onCancelMove={() => setMovingSlotId(null)}
           />
-          <TeamSummary strength={partialStrength} compact={!complete} />
+          <TeamSummary strength={partialStrength} compact={!complete} hidden={hideOverall} />
         </div>
 
         {/* Draft action area */}
@@ -289,8 +289,9 @@ export function DraftScreen() {
             <div className="animate-pop rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-6 text-center">
               <p className="font-display text-3xl text-white">Time completo! 🎉</p>
               <p className="mt-1 text-white/70">
-                Overall {partialStrength.overall} · química {partialStrength.chemistry}. Ajeite as posições se quiser e
-                encare a Copa.
+                {hideOverall
+                  ? 'Overall ? · química ? (modo Almanaque). Ajeite as posições se quiser e encare a Copa.'
+                  : `Overall ${partialStrength.overall} · química ${partialStrength.chemistry}. Ajeite as posições se quiser e encare a Copa.`}
               </p>
               <Button variant="gold" className="mt-4 px-8 py-4 text-lg" onClick={finishDraft}>
                 ⚽ Simular campanha

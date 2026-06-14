@@ -232,6 +232,49 @@ describe('matchmaking variance (upsets)', () => {
   });
 });
 
+describe('red cards (cosmetic)', () => {
+  const oppLit = (ovr: number): Opponent => ({
+    id: 'o', name: 'Rival', flag: '🏴', strength: ovr,
+    attack: ovr, midfield: ovr, defense: ovr, goalkeeper: ovr, chemistry: 75,
+  });
+
+  it('are deterministic by seed (same seed → same cards and scoreline)', () => {
+    const placed = buildBestTeam('4-3-3');
+    const strength = computeTeamStrength(placed, '4-3-3');
+    const user: UserTeamInput = { name: 'T', flag: '⭐', style: 'equilibrado', strength, placed };
+    const a = simulateMatch(user, oppLit(82), 'X', 'rc-seed');
+    const b = simulateMatch(user, oppLit(82), 'X', 'rc-seed');
+    expect(a.homeRedCards).toEqual(b.homeRedCards);
+    expect(a.awayRedCards).toEqual(b.awayRedCards);
+    expect(a.homeGoals).toBe(b.homeGoals);
+    expect(a.awayGoals).toBe(b.awayGoals);
+  });
+
+  it('do happen sometimes, land in 25–90, and name a real squad member', () => {
+    const placed = buildBestTeam('4-3-3');
+    const strength = computeTeamStrength(placed, '4-3-3');
+    const names = new Set(placed.map((p) => p.player.name));
+    let totalHomeReds = 0;
+    for (let i = 0; i < 300; i++) {
+      const m = simulateMatch(
+        { name: 'T', flag: '⭐', style: 'equilibrado', strength, placed },
+        oppLit(80),
+        'Amistoso',
+        `rc-${i}`,
+      );
+      for (const c of [...m.homeRedCards, ...m.awayRedCards]) {
+        expect(c.minute).toBeGreaterThanOrEqual(25);
+        expect(c.minute).toBeLessThanOrEqual(90);
+      }
+      for (const c of m.homeRedCards) {
+        expect(names.has(c.name)).toBe(true);
+        totalHomeReds++;
+      }
+    }
+    expect(totalHomeReds).toBeGreaterThan(0); // rare, but they occur
+  });
+});
+
 describe('balance (regression)', () => {
   it('a near-max team dominates and a 7-0 is reachable', () => {
     const placed = buildBestTeam('4-3-3');

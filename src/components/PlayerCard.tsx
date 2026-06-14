@@ -67,7 +67,7 @@ export function PlayerCard({ player, hideOverall, selected, onClick, fit, compac
         )}
       </div>
 
-      {!compact && <p className="mt-2 line-clamp-2 text-xs text-white/55">{player.desc}</p>}
+      {!compact && !hideOverall && <p className="mt-2 line-clamp-2 text-xs text-white/55">{player.desc}</p>}
 
       {!compact && !hideOverall && (
         <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] text-white/70">

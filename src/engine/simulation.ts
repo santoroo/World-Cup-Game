@@ -13,6 +13,7 @@ import type {
   Opponent,
   PlacedPlayer,
   PlayStyle,
+  RedCard,
   Scorer,
   TeamStrength,
 } from './types';
@@ -200,6 +201,25 @@ function assignScorers(placed: PlacedPlayer[], count: number, rng: Rng): Scorer[
   return scorers.sort((a, b) => a.minute - b.minute);
 }
 
+// ----------------------------------------------------------------------------
+// Red cards — flavour only, never affect the scoreline. Drawn from a *dedicated*
+// RNG stream (seed#cards) so they don't perturb the goal model: every existing
+// seed replays with the exact same scoreline, and the balance tests stay valid.
+// ----------------------------------------------------------------------------
+
+/** Roll 0–2 sending-offs for one side. `nameFor` labels the player shown. */
+function redCardsFor(nameFor: (rng: Rng) => string, rng: Rng): RedCard[] {
+  const cards: RedCard[] = [];
+  if (rng.chance(0.14)) {
+    cards.push({ name: nameFor(rng), minute: rng.int(25, 90) });
+    if (rng.chance(0.12)) cards.push({ name: nameFor(rng), minute: rng.int(25, 90) });
+  }
+  return cards.sort((a, b) => a.minute - b.minute);
+}
+
+const nameFromPlaced = (placed: PlacedPlayer[], fallback: string) => (rng: Rng): string =>
+  placed.length ? rng.pick(placed).player.name : fallback;
+
 function opponentScorers(opp: Opponent, count: number, rng: Rng): Scorer[] {
   const scorers: Scorer[] = [];
   const minutes = new Set<number>();
@@ -258,6 +278,10 @@ export function simulateMatch(
   const homeScorers = assignScorers(user.placed, homeGoals, rng);
   const awayScorers = opponentScorers(opp, awayGoals, rng);
 
+  const cardRng = createRng(`${seed}#cards`);
+  const homeRedCards = redCardsFor(nameFromPlaced(user.placed, user.name), cardRng);
+  const awayRedCards = redCardsFor((r) => `${opp.flag} nº ${r.int(2, 11)}`, cardRng);
+
   // Man of the match.
   let motm: string;
   if (homeGoals > 0 && win) {
@@ -271,7 +295,7 @@ export function simulateMatch(
 
   const blurb = penalties ? `${matchBlurb(homeGoals, awayGoals, win, false)} ${penalties}` : matchBlurb(homeGoals, awayGoals, win, draw);
 
-  return { stage, opponent: opp, homeGoals, awayGoals, homeScorers, awayScorers, manOfTheMatch: motm, blurb, win, draw };
+  return { stage, opponent: opp, homeGoals, awayGoals, homeScorers, awayScorers, homeRedCards, awayRedCards, manOfTheMatch: motm, blurb, win, draw };
 }
 
 /** Pick 7 opponents from real editions with rising difficulty per stage. */
@@ -328,6 +352,8 @@ export interface PvpResult {
   goalsB: number;
   scorersA: Scorer[];
   scorersB: Scorer[];
+  redCardsA: RedCard[];
+  redCardsB: RedCard[];
   winnerId: string;
   penalties: boolean;
   blurb: string;
@@ -367,11 +393,14 @@ export function simulatePvpMatch(a: PvpTeam, b: PvpTeam, seed: string): PvpResul
     penalties = true;
   }
 
+  const cardRng = createRng(`${seed}#cards`);
   return {
     goalsA,
     goalsB,
     scorersA: assignScorers(a.placed, goalsA, rng),
     scorersB: assignScorers(b.placed, goalsB, rng),
+    redCardsA: redCardsFor(nameFromPlaced(a.placed, a.name), cardRng),
+    redCardsB: redCardsFor(nameFromPlaced(b.placed, b.name), cardRng),
     winnerId,
     penalties,
     blurb: pvpBlurb(goalsA, goalsB, penalties),

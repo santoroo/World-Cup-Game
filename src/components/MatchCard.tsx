@@ -39,6 +39,15 @@ export function MatchCard({ match, teamName }: { match: MatchResult; teamName: s
         </span>
         <span className="text-gold-300">Destaque: {match.manOfTheMatch}</span>
       </div>
+
+      {(match.homeRedCards.length > 0 || match.awayRedCards.length > 0) && (
+        <p className="mt-1 text-[11px] text-rose-300">
+          🟥 {[...match.homeRedCards, ...match.awayRedCards]
+            .sort((a, b) => a.minute - b.minute)
+            .map((c) => `${c.name} ${c.minute}'`)
+            .join(', ')}
+        </p>
+      )}
     </div>
   );
 }

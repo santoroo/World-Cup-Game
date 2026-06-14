@@ -1,19 +1,27 @@
 import { useState } from 'react';
 import { Button } from '../../components/Button';
+import type { GameMode } from '../../engine';
 import { useMultiplayer } from '../../game/useMultiplayer';
+
+const MODES: { id: GameMode; label: string; desc: string }[] = [
+  { id: 'classico', label: 'Clássico', desc: 'Notas e atributos das cartas à mostra.' },
+  { id: 'almanaque', label: 'Almanaque', desc: 'Notas e força escondidas — escolha pelo nome, país e ano.' },
+  { id: 'caos', label: 'Caos', desc: 'Sorteios mais difíceis e Colégio Módulo mais frequente.' },
+];
 
 export function MpJoin({ onBack }: { onBack: () => void }) {
   const { create, join, status } = useMultiplayer();
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
-  const [mode, setMode] = useState<'create' | 'join'>('create');
+  const [tab, setTab] = useState<'create' | 'join'>('create');
+  const [gameMode, setGameMode] = useState<GameMode>('classico');
 
   const cleanName = name.trim();
-  const ready = status === 'online' && cleanName.length > 0 && (mode === 'create' || code.trim().length >= 4);
+  const ready = status === 'online' && cleanName.length > 0 && (tab === 'create' || code.trim().length >= 4);
 
   const submit = () => {
     if (!ready) return;
-    if (mode === 'create') create(cleanName);
+    if (tab === 'create') create(cleanName, gameMode);
     else join(code, cleanName);
   };
 
@@ -46,15 +54,36 @@ export function MpJoin({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <TabButton active={mode === 'create'} onClick={() => setMode('create')}>
+          <TabButton active={tab === 'create'} onClick={() => setTab('create')}>
             Criar sala
           </TabButton>
-          <TabButton active={mode === 'join'} onClick={() => setMode('join')}>
+          <TabButton active={tab === 'join'} onClick={() => setTab('join')}>
             Entrar com código
           </TabButton>
         </div>
 
-        {mode === 'join' && (
+        {tab === 'create' && (
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-white/70">Modo de jogo</label>
+            <div className="grid gap-2">
+              {MODES.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setGameMode(m.id)}
+                  className={`rounded-xl border p-3 text-left transition ${
+                    gameMode === m.id ? 'border-gold-400 bg-gold-400/10' : 'border-white/15 bg-black/20 hover:border-white/40'
+                  }`}
+                >
+                  <div className="font-display text-lg text-white">{m.label}</div>
+                  <div className="text-xs text-white/55">{m.desc}</div>
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-white/40">O modo vale pra todos da sala — quem cria, escolhe.</p>
+          </div>
+        )}
+
+        {tab === 'join' && (
           <div>
             <label className="mb-1 block text-sm font-semibold text-white/70">Código da sala</label>
             <input
@@ -69,7 +98,7 @@ export function MpJoin({ onBack }: { onBack: () => void }) {
         )}
 
         <Button variant="gold" className="w-full py-4 text-lg" onClick={submit} disabled={!ready}>
-          {mode === 'create' ? '➕ Criar sala' : '🚪 Entrar na sala'}
+          {tab === 'create' ? '➕ Criar sala' : '🚪 Entrar na sala'}
         </Button>
         {status !== 'online' && (
           <p className="text-center text-xs text-amber-300">Aguardando conexão com o servidor…</p>
