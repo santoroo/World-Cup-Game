@@ -16,7 +16,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { pickOptions, type GameMode, type MpPlayer, type Player, type RoomState } from '../engine';
+import { pickOptions, type DirecaoPenalti, type GameMode, type MpPlayer, type Player, type RoomState } from '../engine';
 import { EDITIONS } from '../lib/editions';
 import { decode, encode, type ClientMsg, type ServerMsg } from './mpProtocol';
 
@@ -73,6 +73,8 @@ interface MpContextValue {
   mover: (de: string, para: string) => void;
   trocar: (a: string, b: string) => void;
   skip: () => void;
+  prontoPenalti: () => void;
+  penalti: (dir: DirecaoPenalti) => void;
   rematch: () => void;
   leave: () => void;
 }
@@ -184,6 +186,8 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const mover = useCallback((de: string, para: string) => send({ t: 'mover', de, para }), [send]);
   const trocar = useCallback((a: string, b: string) => send({ t: 'trocar', a, b }), [send]);
   const skip = useCallback(() => send({ t: 'skip' }), [send]);
+  const prontoPenalti = useCallback(() => send({ t: 'prontoPenalti' }), [send]);
+  const penalti = useCallback((dir: DirecaoPenalti) => send({ t: 'penalti', dir }), [send]);
   const rematch = useCallback(() => send({ t: 'rematch' }), [send]);
   const leave = useCallback(() => {
     send({ t: 'leave' });
@@ -227,6 +231,8 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     mover,
     trocar,
     skip,
+    prontoPenalti,
+    penalti,
     rematch,
     leave,
   };

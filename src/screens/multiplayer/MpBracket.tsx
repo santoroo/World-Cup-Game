@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../../components/Button';
+import { DisputaPenaltis, type DadosDisputaPenaltis } from '../../components/DisputaPenaltis';
 import { FormationPitch } from '../../components/FormationPitch';
 import { LiveMatch, SpeedSelector, useSimSpeed } from '../../components/LiveMatch';
-import type { BracketMatch, MpPlayer } from '../../engine';
+import type { BracketMatch, MpPlayer, RoomState } from '../../engine';
 import { useMultiplayer } from '../../game/useMultiplayer';
 import { liveFromBracket } from '../../lib/matchTimeline';
 
 export function MpBracket({ onExit }: { onExit: () => void }) {
-  const { room, isHost, rematch } = useMultiplayer();
+  const { room, myId, isHost, rematch, prontoPenalti, penalti } = useMultiplayer();
   const [speed, setSpeed] = useSimSpeed();
   const rounds = room?.bracket?.rounds ?? [];
 
@@ -15,21 +16,47 @@ export function MpBracket({ onExit }: { onExit: () => void }) {
   // playing each tie live in round/slot order. `played` = ties fully revealed.
   const total = rounds.reduce((n, r) => n + r.length, 0);
   const [played, setPlayed] = useState(0);
+  // Replay 0'→90' do confronto atual concluído? (antes de entrar nos pênaltis)
+  const [replayConcluido, setReplayConcluido] = useState(false);
   const allRevealed = played >= total;
 
-  // Byes (and any result-less slot) carry no animation — skip past them.
   const current = flatItem(rounds, played);
+  const disputaAtiva = room?.disputaPenaltis ?? null;
+  const disputaDesteConfronto = disputaAtiva && current && disputaAtiva.partidaId === current.id;
+
+  // Byes (e qualquer slot ainda sem resultado pra animar) não têm animação — pula.
   useEffect(() => {
     if (allRevealed) return;
-    if (current && (current.byeId || !current.result)) {
+    if (current && current.byeId) {
       const id = setTimeout(() => setPlayed((p) => p + 1), 500);
       return () => clearTimeout(id);
     }
   }, [played, current, allRevealed]);
 
+  // Reseta o estado do replay sempre que o cursor muda de confronto.
+  useEffect(() => setReplayConcluido(false), [played]);
+
+  // Ao terminar o replay de um empate, avisa o servidor que estou pronto pros pênaltis.
+  useEffect(() => {
+    if (replayConcluido && disputaDesteConfronto) prontoPenalti();
+  }, [replayConcluido, disputaDesteConfronto, prontoPenalti]);
+
   if (!room || !room.bracket) return null;
   const byId = new Map(room.players.map((p) => [p.id, p]));
   const champion = allRevealed ? byId.get(room.bracket.championId ?? '') ?? null : null;
+
+  // "Pular": com disputa ativa, leva até ela (sem burlar a interação); senão revela tudo.
+  const pular = () => {
+    if (disputaAtiva) {
+      const idx = flatIndexOf(rounds, disputaAtiva.partidaId);
+      if (idx >= 0) {
+        setPlayed(idx);
+        setReplayConcluido(true);
+        return;
+      }
+    }
+    setPlayed(total);
+  };
 
   let offset = 0;
 
@@ -77,11 +104,31 @@ export function MpBracket({ onExit }: { onExit: () => void }) {
                   const data = m.result && !m.byeId ? liveFromBracket(m, byId) : null;
 
                   if (isCurrent && data) {
-                    return (
-                      <div key={m.id} className="sm:col-span-2">
-                        <LiveMatch data={data} speed={speed} onDone={() => setPlayed((p) => p + 1)} />
-                      </div>
-                    );
+                    const precisa = m.result!.penalties || m.result!.winnerId == null;
+                    // Fase A: replay 0'→90'.
+                    if (!replayConcluido) {
+                      return (
+                        <div key={m.id} className="sm:col-span-2">
+                          <LiveMatch
+                            data={data}
+                            speed={speed}
+                            onDone={() => (precisa ? setReplayConcluido(true) : setPlayed((p) => p + 1))}
+                          />
+                        </div>
+                      );
+                    }
+                    // Fase B: disputa de pênaltis (interativa ao vivo ou replay do resultado).
+                    if (precisa) {
+                      return (
+                        <div key={m.id} className="sm:col-span-2">
+                          <DisputaPenaltis
+                            dados={dadosDisputa(m, room, byId, myId)}
+                            onEscolher={penalti}
+                            onConcluido={() => setPlayed((p) => p + 1)}
+                          />
+                        </div>
+                      );
+                    }
                   }
                   return <MatchRow key={m.id} match={m} byId={byId} />;
                 })}
@@ -93,8 +140,8 @@ export function MpBracket({ onExit }: { onExit: () => void }) {
 
       {!allRevealed && (
         <div className="mt-6 text-center">
-          <button onClick={() => setPlayed(total)} className="text-sm text-white/50 hover:text-white">
-            pular animação →
+          <button onClick={pular} className="text-sm text-white/50 hover:text-white">
+            {disputaAtiva ? 'ir pros pênaltis →' : 'pular animação →'}
           </button>
         </div>
       )}
@@ -113,6 +160,38 @@ export function MpBracket({ onExit }: { onExit: () => void }) {
   );
 }
 
+/** Monta o view-model da disputa pro confronto `m` (ao vivo ou já resolvido). */
+function dadosDisputa(
+  m: BracketMatch,
+  room: RoomState,
+  byId: Map<string, MpPlayer>,
+  myId: string | null,
+): DadosDisputaPenaltis {
+  const d = room.disputaPenaltis && room.disputaPenaltis.partidaId === m.id ? room.disputaPenaltis : null;
+  const a = m.aId ? byId.get(m.aId) : null;
+  const b = m.bId ? byId.get(m.bId) : null;
+  const meuLado = myId && myId === m.aId ? 'a' : myId && myId === m.bId ? 'b' : null;
+  const vencedorLado = m.result?.winnerId ? (m.result.winnerId === m.aId ? 'a' : 'b') : null;
+
+  return {
+    stageLabel: m.stageLabel,
+    ladoA: { nome: a?.name ?? '?', icon: a?.avatar ?? '⚽' },
+    ladoB: { nome: b?.name ?? '?', icon: b?.avatar ?? '⚽' },
+    historico: d?.historico ?? m.result?.penaltis?.historico ?? [],
+    encerrada: m.result?.winnerId != null,
+    vencedorLado,
+    meuLado,
+    pendente:
+      d && !d.encerrada
+        ? {
+            vez: d.vez,
+            prazo: d.prazo,
+            jaEscolhi: meuLado === d.vez ? d.direcaoChute != null : d.direcaoDefesa != null,
+          }
+        : null,
+  };
+}
+
 /** The flattened tie at global index `i`, or null if out of range. */
 function flatItem(rounds: BracketMatch[][], i: number): BracketMatch | null {
   let idx = i;
@@ -121,6 +200,18 @@ function flatItem(rounds: BracketMatch[][], i: number): BracketMatch | null {
     idx -= round.length;
   }
   return null;
+}
+
+/** Índice achatado (na ordem de revelação) do confronto com este id. */
+function flatIndexOf(rounds: BracketMatch[][], matchId: string): number {
+  let idx = 0;
+  for (const round of rounds) {
+    for (const m of round) {
+      if (m.id === matchId) return idx;
+      idx++;
+    }
+  }
+  return -1;
 }
 
 function MatchRow({ match, byId }: { match: BracketMatch; byId: Map<string, MpPlayer> }) {
@@ -155,8 +246,10 @@ function MatchRow({ match, byId }: { match: BracketMatch; byId: Map<string, MpPl
         </div>
         <Side player={b} winner={winnerIsB} align="right" />
       </div>
-      {res?.penalties && (
-        <p className="mt-1 text-center text-[11px] font-semibold text-amber-300">decidido nos pênaltis</p>
+      {res?.penalties && res.penaltis && (
+        <p className="mt-1 text-center text-[11px] font-semibold text-amber-300">
+          pênaltis: {res.penaltis.golsA} × {res.penaltis.golsB}
+        </p>
       )}
       {res?.blurb && <p className="mt-1 text-center text-xs italic text-white/55">“{res.blurb}”</p>}
     </div>

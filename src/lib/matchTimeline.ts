@@ -128,6 +128,6 @@ export function liveFromBracket(match: BracketMatch, byId: Map<string, MpPlayer>
     ),
     blurb: res.blurb,
     penalties: res.penalties,
-    winner: res.winnerId === match.aId ? 'home' : 'away',
+    winner: res.a.goals === res.b.goals ? 'draw' : res.winnerId === match.aId ? 'home' : 'away',
   };
 }
