@@ -7,12 +7,14 @@ import {
   canStart,
   configurePlayer,
   createRoom,
+  eligibleOpenSlots,
   getPlayer,
   isDraftComplete,
   loadEditions,
   MAX_FREE_SKIPS,
   MP_MAX_PLAYERS,
   MP_SQUAD_SIZE,
+  moverFor,
   pickFor,
   pickOptions,
   rematch,
@@ -21,6 +23,7 @@ import {
   setReady,
   skipFor,
   startDraft,
+  type DraftState,
   type Edition,
   type RawEdition,
   type RoomState,
@@ -172,6 +175,47 @@ describe('mp draft', () => {
       room = skipFor(room, cur);
     }
     expect(getPlayer(room, cur)!.skipsUsed).toBe(MAX_FREE_SKIPS);
+  });
+});
+
+describe('mp posição (escolha de vaga, igual ao solo)', () => {
+  // Estado de draft "sintético" do jogador, pra reusar os helpers do engine.
+  const draftLike = (room: RoomState, id: string): DraftState => {
+    const m = getPlayer(room, id)!;
+    return { seed: '', formation: m.formation, placed: m.placed, usedPlayerIds: room.usedPlayerIds, skipsUsed: 0, rollCount: 0 };
+  };
+
+  it('pickFor respeita a vaga escolhida e moverFor reposiciona o próprio time', () => {
+    let room = startDraft(lobby(2, 'pos-seed'));
+    const cur = room.currentId!;
+    room = rollFor(room, EDITIONS, cur);
+    const opts = pickOptions(room, EDITIONS, cur);
+    expect(opts.length).toBeGreaterThan(0);
+
+    // Prefere um jogador versátil (encaixa em ≥2 vagas) pra exercer a escolha.
+    const versatil = opts.find((p) => eligibleOpenSlots(draftLike(room, cur), p).length >= 2) ?? opts[0];
+    const elig = eligibleOpenSlots(draftLike(room, cur), versatil);
+    const alvo = elig[elig.length - 1]; // não necessariamente a "melhor" vaga
+
+    room = pickFor(room, EDITIONS, cur, versatil.id, alvo.id);
+    const colocado = getPlayer(room, cur)!.placed.find((pp) => pp.player.id === versatil.id);
+    expect(colocado?.slotId).toBe(alvo.id);
+
+    if (elig.length >= 2) {
+      const destino = elig.find((s) => s.id !== alvo.id)!;
+      room = moverFor(room, cur, alvo.id, destino.id);
+      const movido = getPlayer(room, cur)!.placed.find((pp) => pp.player.id === versatil.id);
+      expect(movido?.slotId).toBe(destino.id);
+    }
+  });
+
+  it('pickFor cai na melhor vaga quando nenhum slotId é dado (auto-pick)', () => {
+    let room = startDraft(lobby(2, 'auto-slot'));
+    const cur = room.currentId!;
+    room = rollFor(room, EDITIONS, cur);
+    const opts = pickOptions(room, EDITIONS, cur);
+    room = pickFor(room, EDITIONS, cur, opts[0].id); // sem slotId
+    expect(getPlayer(room, cur)!.placed).toHaveLength(1);
   });
 });
 

@@ -23,6 +23,7 @@ import {
   configurePlayer,
   createRoom,
   getPlayer,
+  moverFor,
   MP_MAX_PLAYERS,
   randomSeed,
   rematch,
@@ -33,6 +34,7 @@ import {
   setReady,
   skipFor,
   startDraft,
+  trocarFor,
   type RoomState,
 } from '../src/engine';
 import { EDITIONS } from '../src/lib/editions';
@@ -199,7 +201,13 @@ function handleInRoom(ws: WebSocket, msg: Exclude<ClientMsg, { t: 'create' } | {
       room.state = rollFor(room.state, EDITIONS, me);
       break;
     case 'pick':
-      room.state = pickFor(room.state, EDITIONS, me, msg.cardId);
+      room.state = pickFor(room.state, EDITIONS, me, msg.cardId, msg.slotId);
+      break;
+    case 'mover':
+      room.state = moverFor(room.state, me, msg.de, msg.para);
+      break;
+    case 'trocar':
+      room.state = trocarFor(room.state, me, msg.a, msg.b);
       break;
     case 'skip':
       room.state = skipFor(room.state, me);

@@ -14,12 +14,16 @@
 // ============================================================================
 
 import { computeTeamStrength } from './chemistry';
+import { evaluateFit } from './compatibility';
 import {
   bestSlotFor,
   MAX_FREE_SKIPS,
+  movePlayer,
+  openSlots,
   pickablePlayers,
   placeInSlot,
   roll as engineRoll,
+  swapPlayers,
   type DraftState,
 } from './draft';
 import { FORMATION_LIST } from './formations';
@@ -34,6 +38,7 @@ import type {
   PlayStyle,
   RedCard,
   Scorer,
+  Slot,
   TeamStrength,
 } from './types';
 
@@ -309,10 +314,18 @@ export function rollFor(room: RoomState, editions: Edition[], playerId: string):
 }
 
 /**
- * Pick a player by id from the rolled edition; auto-assigned to the best open
- * slot. Advances the snake turn and, once everyone has 11, kicks off the bracket.
+ * Pick a player by id from the rolled edition. Se `slotId` vier (escolha manual,
+ * igual ao solo), coloca naquela vaga aberta e compatível; senão cai na melhor
+ * vaga aberta (`bestSlotFor`, usado pelo auto-pick). Avança a vez no snake e, com
+ * todos os 11 montados, dispara o chaveamento.
  */
-export function pickFor(room: RoomState, editions: Edition[], playerId: string, pickedPlayerId: string): RoomState {
+export function pickFor(
+  room: RoomState,
+  editions: Edition[],
+  playerId: string,
+  pickedPlayerId: string,
+  slotId?: string,
+): RoomState {
   if (room.phase !== 'draft' || room.currentId !== playerId || !room.rolledEditionId) return room;
   const idx = room.players.findIndex((p) => p.id === playerId);
   if (idx < 0) return room;
@@ -324,7 +337,14 @@ export function pickFor(room: RoomState, editions: Edition[], playerId: string, 
   const chosen = pickablePlayers(synth, edition).find((p) => p.id === pickedPlayerId);
   if (!chosen) return room; // already taken or doesn't fit an open slot
 
-  const slot = bestSlotFor(synth, chosen);
+  // Vaga escolhida pelo jogador, se válida (aberta + encaixe permitido). Caso
+  // contrário, melhor vaga automática — preserva o comportamento do auto-pick.
+  let slot: Slot | null = null;
+  if (slotId) {
+    const aberta = openSlots(synth).find((s) => s.id === slotId);
+    if (aberta && evaluateFit(chosen, aberta.position).allowed) slot = aberta;
+  }
+  if (!slot) slot = bestSlotFor(synth, chosen);
   if (!slot) return room;
   const updatedPlaced = placeInSlot(synth, chosen, slot).placed;
 
@@ -348,6 +368,36 @@ export function skipFor(room: RoomState, playerId: string): RoomState {
   if (!p || p.skipsUsed >= MAX_FREE_SKIPS) return room;
   p.skipsUsed += 1;
   return { ...room, players, rolledEditionId: null };
+}
+
+/**
+ * Reposiciona um jogador já escalado do próprio time para uma vaga vazia (igual
+ * ao solo). Permitido durante o draft, independentemente da vez — só mexe na
+ * escalação do próprio jogador, não no sorteio nem na unicidade global.
+ */
+export function moverFor(room: RoomState, playerId: string, fromSlotId: string, toSlotId: string): RoomState {
+  if (room.phase !== 'draft') return room;
+  const idx = room.players.findIndex((p) => p.id === playerId);
+  if (idx < 0) return room;
+  const player = room.players[idx];
+  const next = movePlayer(synthDraft(room, player), fromSlotId, toSlotId);
+  if (next.placed === player.placed) return room; // no-op (vaga ocupada/ilegal)
+  const players = clonePlayers(room);
+  players[idx] = { ...player, placed: next.placed };
+  return { ...room, players };
+}
+
+/** Troca dois jogadores escalados do próprio time, recalculando o encaixe. */
+export function trocarFor(room: RoomState, playerId: string, slotIdA: string, slotIdB: string): RoomState {
+  if (room.phase !== 'draft') return room;
+  const idx = room.players.findIndex((p) => p.id === playerId);
+  if (idx < 0) return room;
+  const player = room.players[idx];
+  const next = swapPlayers(synthDraft(room, player), slotIdA, slotIdB);
+  if (next.placed === player.placed) return room; // no-op (encaixe ilegal)
+  const players = clonePlayers(room);
+  players[idx] = { ...player, placed: next.placed };
+  return { ...room, players };
 }
 
 function advanceTurn(room: RoomState): RoomState {

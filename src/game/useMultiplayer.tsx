@@ -69,7 +69,9 @@ interface MpContextValue {
   setReady: (ready: boolean) => void;
   start: () => void;
   roll: () => void;
-  pick: (cardId: string) => void;
+  pick: (cardId: string, slotId?: string) => void;
+  mover: (de: string, para: string) => void;
+  trocar: (a: string, b: string) => void;
   skip: () => void;
   rematch: () => void;
   leave: () => void;
@@ -178,7 +180,9 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
   const setReady = useCallback((ready: boolean) => send({ t: 'ready', ready }), [send]);
   const start = useCallback(() => send({ t: 'start' }), [send]);
   const roll = useCallback(() => send({ t: 'roll' }), [send]);
-  const pick = useCallback((cardId: string) => send({ t: 'pick', cardId }), [send]);
+  const pick = useCallback((cardId: string, slotId?: string) => send({ t: 'pick', cardId, slotId }), [send]);
+  const mover = useCallback((de: string, para: string) => send({ t: 'mover', de, para }), [send]);
+  const trocar = useCallback((a: string, b: string) => send({ t: 'trocar', a, b }), [send]);
   const skip = useCallback(() => send({ t: 'skip' }), [send]);
   const rematch = useCallback(() => send({ t: 'rematch' }), [send]);
   const leave = useCallback(() => {
@@ -220,6 +224,8 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     start,
     roll,
     pick,
+    mover,
+    trocar,
     skip,
     rematch,
     leave,

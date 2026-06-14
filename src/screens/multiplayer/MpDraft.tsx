@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../components/Button';
 import { Dice } from '../../components/Dice';
 import { FormationPitch } from '../../components/FormationPitch';
@@ -6,29 +6,84 @@ import { PlayerCard } from '../../components/PlayerCard';
 import { TeamSummary } from '../../components/TeamSummary';
 import {
   computeTeamStrength,
+  eligibleOpenSlots,
+  evaluateFit,
   FORMATIONS,
   MAX_FREE_SKIPS,
   MP_SQUAD_SIZE,
+  type DraftState,
   type MpPlayer,
+  type PlacedPlayer,
+  type Player,
+  type Slot,
 } from '../../engine';
 import { useMultiplayer } from '../../game/useMultiplayer';
 import { positionLabel } from '../../lib/messages';
 
 export function MpDraft({ onExit }: { onExit: () => void }) {
-  const { room, me, isMyTurn, currentPlayer, myPickOptions, roll, pick, skip } = useMultiplayer();
+  const { room, me, isMyTurn, currentPlayer, myPickOptions, roll, pick, mover, trocar, skip } = useMultiplayer();
   const [diceVal, setDiceVal] = useState(6);
   const [rolling, setRolling] = useState(false);
+  // Jogador recém-sorteado aguardando a escolha da vaga (igual ao solo).
+  const [pendingPlayer, setPendingPlayer] = useState<Player | null>(null);
+  // Vaga de um jogador já escalado sendo reposicionado.
+  const [movingSlotId, setMovingSlotId] = useState<string | null>(null);
 
   const rolledEditionId = room?.rolledEditionId ?? null;
 
-  // Stop the dice animation as soon as the server confirms the rolled edition.
+  // Para a animação do dado assim que o servidor confirma a edição sorteada.
   useEffect(() => {
     if (rolledEditionId) setRolling(false);
+    else setPendingPlayer(null); // sorteio limpo (escolheu/pulou) → zera pendente
   }, [rolledEditionId]);
-  // Reset the animation whenever the turn changes.
+  // Reseta a interação quando a vez muda.
   useEffect(() => {
     setRolling(false);
+    setPendingPlayer(null);
+    setMovingSlotId(null);
   }, [room?.currentId]);
+
+  // Estado de draft "sintético" do meu time para reusar os helpers puros do engine.
+  const myDraft = useMemo<DraftState | null>(() => {
+    if (!me || !room) return null;
+    return {
+      seed: '',
+      formation: me.formation,
+      placed: me.placed,
+      usedPlayerIds: room.usedPlayerIds,
+      skipsUsed: me.skipsUsed,
+      rollCount: 0,
+    };
+  }, [me, room]);
+
+  // Vagas onde o jogador pendente pode entrar (encaixe perfeito primeiro).
+  const pendingSlots = useMemo(() => {
+    if (!pendingPlayer || !myDraft) return [] as { slot: Slot; perfect: boolean }[];
+    return eligibleOpenSlots(myDraft, pendingPlayer)
+      .map((slot) => ({ slot, perfect: !evaluateFit(pendingPlayer, slot.position).outOfPosition }))
+      .sort((a, b) => Number(b.perfect) - Number(a.perfect));
+  }, [pendingPlayer, myDraft]);
+
+  // Destinos válidos ao mover um escalado: vagas vazias que ele encaixa + vagas
+  // ocupadas em que a troca é compatível pros dois.
+  const moveTargets = useMemo(() => {
+    if (!movingSlotId || !me) return [] as string[];
+    const slots = FORMATIONS[me.formation];
+    const moving = me.placed.find((p) => p.slotId === movingSlotId);
+    const movingSlot = slots.find((s) => s.id === movingSlotId);
+    if (!moving || !movingSlot) return [];
+    return slots
+      .filter((s) => {
+        if (s.id === movingSlotId) return false;
+        const occupant = me.placed.find((p) => p.slotId === s.id);
+        if (!occupant) return evaluateFit(moving.player, s.position).allowed;
+        return (
+          evaluateFit(moving.player, s.position).allowed &&
+          evaluateFit(occupant.player, movingSlot.position).allowed
+        );
+      })
+      .map((s) => s.id);
+  }, [movingSlotId, me]);
 
   if (!room || !me) return null;
 
@@ -36,12 +91,55 @@ export function MpDraft({ onExit }: { onExit: () => void }) {
   const myStrength = computeTeamStrength(me.placed, me.formation);
   const hideOverall = room.mode === 'almanaque';
   const skipsLeft = Math.max(0, MAX_FREE_SKIPS - me.skipsUsed);
+  const slots = FORMATIONS[me.formation];
+  const eligibleSlotIds = pendingPlayer ? pendingSlots.map((p) => p.slot.id) : moveTargets;
+  const movingPlayer = movingSlotId ? me.placed.find((p) => p.slotId === movingSlotId) ?? null : null;
 
   const handleRoll = () => {
     if (rolling || rolledEditionId) return;
+    setPendingPlayer(null);
+    setMovingSlotId(null);
     setRolling(true);
     setDiceVal(1 + Math.floor(Math.random() * 6));
     roll();
+  };
+
+  const choosePending = (p: Player) => {
+    setMovingSlotId(null);
+    setPendingPlayer(p);
+  };
+
+  const placePending = (slot: Slot) => {
+    if (!pendingPlayer) return;
+    pick(pendingPlayer.id, slot.id);
+    setPendingPlayer(null);
+  };
+
+  const handleSlotClick = (slotId: string) => {
+    const slot = slots.find((s) => s.id === slotId)!;
+    const occupant = me.placed.find((p) => p.slotId === slotId);
+
+    // Escalando o jogador recém-escolhido.
+    if (pendingPlayer) {
+      if (!occupant && evaluateFit(pendingPlayer, slot.position).allowed) placePending(slot);
+      return;
+    }
+
+    // Reposicionando um jogador existente.
+    if (movingSlotId) {
+      if (movingSlotId === slotId) {
+        setMovingSlotId(null);
+        return;
+      }
+      if (!moveTargets.includes(slotId)) return;
+      if (occupant) trocar(movingSlotId, slotId);
+      else mover(movingSlotId, slotId);
+      setMovingSlotId(null);
+      return;
+    }
+
+    // Nada pendente: começa a mover o jogador desta vaga.
+    if (occupant) setMovingSlotId(slotId);
   };
 
   return (
@@ -83,7 +181,20 @@ export function MpDraft({ onExit }: { onExit: () => void }) {
       <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
         {/* My pitch + my action area */}
         <div className="space-y-3">
-          <FormationPitch formation={me.formation} placed={me.placed} />
+          <FormationPitch
+            formation={me.formation}
+            placed={me.placed}
+            highlightOpen={!pendingPlayer && !movingSlotId}
+            eligibleSlotIds={eligibleSlotIds}
+            selectedSlotId={movingSlotId}
+            onSlotClick={handleSlotClick}
+          />
+          <PitchHint
+            pendingPlayer={pendingPlayer}
+            movingPlayer={movingPlayer}
+            hasPlaced={me.placed.length > 0}
+            onCancelMove={() => setMovingSlotId(null)}
+          />
           <TeamSummary strength={myStrength} compact hidden={hideOverall} />
         </div>
 
@@ -105,14 +216,55 @@ export function MpDraft({ onExit }: { onExit: () => void }) {
               ) : (
                 <div>
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-display text-xl text-white">Escolha sua carta</p>
+                    <p className="font-display text-xl text-white">
+                      {pendingPlayer ? 'Escolha a posição' : 'Escolha sua carta'}
+                    </p>
                     <Button variant="ghost" onClick={skip} disabled={skipsLeft <= 0} title={skipsLeft <= 0 ? 'Sem pulos' : undefined}>
                       {skipsLeft > 0 ? `Pular (${skipsLeft})` : 'Sem pulos'}
                     </Button>
                   </div>
+
+                  {/* Seletor de posição do jogador escolhido */}
+                  {pendingPlayer && (
+                    <div className="mb-3 animate-card-in rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3">
+                      <p className="mb-2 text-sm text-white/80">
+                        Onde <b>{pendingPlayer.name}</b> joga? Toque numa vaga abaixo ou no campo.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {pendingSlots.map(({ slot, perfect }) => (
+                          <button
+                            key={slot.id}
+                            onClick={() => placePending(slot)}
+                            className={`rounded-lg border px-3 py-2 text-sm font-semibold transition hover:-translate-y-0.5 ${
+                              perfect
+                                ? 'border-emerald-400/60 bg-emerald-500/20 text-emerald-100'
+                                : 'border-amber-400/50 bg-amber-500/15 text-amber-100'
+                            }`}
+                          >
+                            {positionLabel(slot.position)} <span className="opacity-60">({slot.label})</span>
+                            {perfect ? ' ✓' : ' ⚠'}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => setPendingPlayer(null)}
+                          className="rounded-lg px-3 py-2 text-sm text-white/60 hover:text-white"
+                        >
+                          cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {myPickOptions.map((p) => (
-                      <PlayerCard key={p.id} player={p} hideOverall={hideOverall} onClick={() => pick(p.id)} />
+                      <PlayerCard
+                        key={p.id}
+                        player={p}
+                        hideOverall={hideOverall}
+                        selected={pendingPlayer?.id === p.id}
+                        onClick={() => choosePending(p)}
+                        fit={myDraft ? fitHint(p, myDraft) : undefined}
+                      />
                     ))}
                   </div>
                   {myPickOptions.length === 0 && (
@@ -125,6 +277,36 @@ export function MpDraft({ onExit }: { onExit: () => void }) {
           {!isMyTurn && rolledEditionId && currentPlayer && (
             <div className="rounded-2xl border border-white/10 bg-black/25 p-4 text-center text-sm text-white/60">
               {currentPlayer.name} rolou o dado e está escolhendo um jogador…
+            </div>
+          )}
+
+          {/* Meus escalados — toque pra trocar de posição (disponível o draft todo) */}
+          {me.placed.length > 0 && (
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <h3 className="mb-2 text-sm font-semibold text-white/60">
+                Seus escalados <span className="font-normal text-white/35">· toque para trocar de posição</span>
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {me.placed.map((pp) => (
+                  <button
+                    key={pp.slotId}
+                    onClick={() => {
+                      setPendingPlayer(null);
+                      setMovingSlotId((cur) => (cur === pp.slotId ? null : pp.slotId));
+                    }}
+                    className={`rounded-lg px-2 py-1 text-xs transition ${
+                      movingSlotId === pp.slotId
+                        ? 'bg-gold-400 text-pitch-900'
+                        : pp.outOfPosition
+                          ? 'bg-amber-500/20 text-amber-200 hover:bg-amber-500/30'
+                          : 'bg-white/10 text-white/80 hover:bg-white/20'
+                    }`}
+                    title={slotLabel(pp, slots)}
+                  >
+                    {pp.player.flag} {pp.player.name} · {slotLabel(pp, slots)}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -143,6 +325,51 @@ export function MpDraft({ onExit }: { onExit: () => void }) {
       </div>
     </div>
   );
+}
+
+function PitchHint({
+  pendingPlayer,
+  movingPlayer,
+  hasPlaced,
+  onCancelMove,
+}: {
+  pendingPlayer: Player | null;
+  movingPlayer: PlacedPlayer | null;
+  hasPlaced: boolean;
+  onCancelMove: () => void;
+}) {
+  if (pendingPlayer) {
+    return (
+      <p className="text-center text-xs text-emerald-300">
+        Toque numa vaga destacada para escalar <b>{pendingPlayer.name}</b>.
+      </p>
+    );
+  }
+  if (movingPlayer) {
+    return (
+      <p className="text-center text-xs text-gold-300">
+        Movendo <b>{movingPlayer.player.name}</b> — toque num destino destacado (ou{' '}
+        <button onClick={onCancelMove} className="underline">cancele</button>).
+      </p>
+    );
+  }
+  if (hasPlaced) {
+    return <p className="text-center text-xs text-white/40">Toque num jogador no campo para trocá-lo de posição.</p>;
+  }
+  return null;
+}
+
+function slotLabel(pp: PlacedPlayer, slots: Slot[]): string {
+  const slot = slots.find((s) => s.id === pp.slotId);
+  return slot ? slot.label : pp.slotId;
+}
+
+/** Dica de encaixe de uma carta, baseada na melhor vaga aberta. */
+function fitHint(player: Player, draft: DraftState): { label: string; perfect: boolean } {
+  const eligible = eligibleOpenSlots(draft, player);
+  const perfect = eligible.some((s) => !evaluateFit(player, s.position).outOfPosition);
+  if (perfect) return { label: 'Encaixa na posição ✓', perfect: true };
+  return { label: 'Só fora de posição ⚠', perfect: false };
 }
 
 function TeamPanel({ player, isCurrent, isMe }: { player: MpPlayer; isCurrent: boolean; isMe: boolean }) {

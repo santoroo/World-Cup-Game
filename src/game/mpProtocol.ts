@@ -15,7 +15,9 @@ export type ClientMsg =
   | { t: 'ready'; ready: boolean }
   | { t: 'start' }
   | { t: 'roll' }
-  | { t: 'pick'; cardId: string }
+  | { t: 'pick'; cardId: string; slotId?: string }
+  | { t: 'mover'; de: string; para: string }
+  | { t: 'trocar'; a: string; b: string }
   | { t: 'skip' }
   | { t: 'rematch' }
   | { t: 'leave' };
